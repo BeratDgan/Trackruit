@@ -37,3 +37,7 @@ next-env.d.ts
 
 #claude
 CLAUDE.MD
+
+#photos
+/logo-pack
+/public/logo.png
