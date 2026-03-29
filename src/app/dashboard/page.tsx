@@ -1,7 +1,8 @@
-export default function DashboardPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold text-brand-navy">Dashboard</h1>
-    </div>
-  )
+import { getApplications } from '@/lib/applications'
+import ApplicationList from '@/components/ApplicationList'
+
+export default async function DashboardPage() {
+  const applications = await getApplications()
+
+  return <ApplicationList initialApplications={applications} />
 }
