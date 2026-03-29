@@ -34,3 +34,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#agent
+ui-guidelines.md
+CLAUDE.MD
+
+#photos
+/logo-pack
+/public/logo.png
+/public/logo
+/.playwright-mcp
