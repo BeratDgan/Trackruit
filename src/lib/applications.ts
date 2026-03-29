@@ -20,6 +20,12 @@ export async function createApplication(input: {
   status: ApplicationStatus
   url?: string
   notes?: string
+  salary?: number | null
+  salary_period?: 'monthly' | 'yearly' | null
+  location?: string | null
+  deadline?: string | null
+  applied_date?: string | null
+  interview_date?: string | null
 }): Promise<Application> {
   const supabase = createClient()
 
@@ -35,6 +41,12 @@ export async function createApplication(input: {
       status: input.status,
       url: input.url ?? null,
       notes: input.notes ?? null,
+      salary: input.salary ?? null,
+      salary_period: input.salary_period ?? null,
+      location: input.location ?? null,
+      deadline: input.deadline ?? null,
+      applied_date: input.applied_date ?? null,
+      interview_date: input.interview_date ?? null,
     })
     .select()
     .single()
@@ -46,7 +58,7 @@ export async function createApplication(input: {
 
 export async function updateApplication(
   id: string,
-  input: Partial<Pick<Application, 'company' | 'position' | 'status' | 'url' | 'notes'>>
+  input: Partial<Pick<Application, 'company' | 'position' | 'status' | 'url' | 'notes' | 'salary' | 'salary_period' | 'location' | 'deadline' | 'applied_date' | 'interview_date'>>
 ): Promise<Application> {
   const supabase = createClient()
 

@@ -11,6 +11,10 @@ const STATUS_OPTIONS: { value: ApplicationStatus; label: string }[] = [
   { value: 'rejected', label: 'Reddedildi' },
 ]
 
+function today() {
+  return new Date().toISOString().split('T')[0]
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -22,13 +26,19 @@ interface Props {
 export default function ApplicationModal({ open, onClose, onCreated, onUpdated, editingApp }: Props) {
   const isEdit = !!editingApp
 
-  const [company, setCompany]   = useState('')
-  const [position, setPosition] = useState('')
-  const [status, setStatus]     = useState<ApplicationStatus>('applied')
-  const [url, setUrl]           = useState('')
-  const [notes, setNotes]       = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState<string | null>(null)
+  const [company, setCompany]             = useState('')
+  const [position, setPosition]           = useState('')
+  const [status, setStatus]               = useState<ApplicationStatus>('applied')
+  const [url, setUrl]                     = useState('')
+  const [notes, setNotes]                 = useState('')
+  const [salary, setSalary]               = useState('')
+  const [salaryPeriod, setSalaryPeriod]   = useState<'monthly' | 'yearly'>('monthly')
+  const [location, setLocation]           = useState('')
+  const [deadline, setDeadline]           = useState('')
+  const [appliedDate, setAppliedDate]     = useState('')
+  const [interviewDate, setInterviewDate] = useState('')
+  const [loading, setLoading]             = useState(false)
+  const [error, setError]                 = useState<string | null>(null)
   const firstInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -39,8 +49,16 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
         setStatus(editingApp.status)
         setUrl(editingApp.url ?? '')
         setNotes(editingApp.notes ?? '')
+        setSalary(editingApp.salary != null ? String(editingApp.salary) : '')
+        setSalaryPeriod(editingApp.salary_period ?? 'monthly')
+        setLocation(editingApp.location ?? '')
+        setDeadline(editingApp.deadline ?? '')
+        setAppliedDate(editingApp.applied_date ?? '')
+        setInterviewDate(editingApp.interview_date ?? '')
       } else {
         setCompany(''); setPosition(''); setStatus('applied'); setUrl(''); setNotes('')
+        setSalary(''); setSalaryPeriod('monthly'); setLocation('')
+        setDeadline(''); setAppliedDate(today()); setInterviewDate('')
       }
       setError(null)
       setTimeout(() => firstInput.current?.focus(), 50)
@@ -54,6 +72,15 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
     return () => window.removeEventListener('keydown', handler)
   }, [open, onClose])
 
+  function handleStatusChange(next: ApplicationStatus) {
+    const prev = status
+    setStatus(next)
+    // Auto-fill applied_date when switching to 'applied' and field is empty
+    if (next === 'applied' && prev !== 'applied' && !appliedDate) {
+      setAppliedDate(today())
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!company.trim() || !position.trim()) return
@@ -66,6 +93,12 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
       status,
       url: url.trim() || null,
       notes: notes.trim() || null,
+      salary: salary ? Number(salary) : null,
+      salary_period: salary ? salaryPeriod : null,
+      location: location.trim() || null,
+      deadline: deadline || null,
+      applied_date: appliedDate || null,
+      interview_date: status === 'interview' ? (interviewDate || null) : null,
     }
 
     try {
@@ -105,10 +138,16 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="w-full max-w-md rounded-2xl animate-modal"
-        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
+        className="w-full max-w-lg rounded-2xl animate-modal flex flex-col"
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-strong)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+          maxHeight: 'calc(100vh - 2rem)',
+        }}
       >
-        <div className="flex items-center justify-between px-6 pt-6 pb-5" style={{ borderBottom: '1px solid var(--border)' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-5 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
             {isEdit ? 'Başvuruyu Düzenle' : 'Yeni Başvuru'}
           </h2>
@@ -125,7 +164,10 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+        {/* Scrollable body */}
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4 overflow-y-auto">
+
+          {/* Company + Position */}
           <div className="grid grid-cols-2 gap-3">
             <Field label="Şirket *">
               <input ref={firstInput} value={company} onChange={e => setCompany(e.target.value)} placeholder="Google, Meta..." required className="input-base" />
@@ -135,18 +177,66 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
             </Field>
           </div>
 
+          {/* Status */}
           <Field label="Durum">
-            <select value={status} onChange={e => setStatus(e.target.value as ApplicationStatus)} className="input-base">
+            <select value={status} onChange={e => handleStatusChange(e.target.value as ApplicationStatus)} className="input-base">
               {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </Field>
 
+          {/* Salary + Period */}
+          <Field label="Maaş">
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={0}
+                value={salary}
+                onChange={e => setSalary(e.target.value)}
+                placeholder="85000"
+                className="input-base flex-1"
+              />
+              <select
+                value={salaryPeriod}
+                onChange={e => setSalaryPeriod(e.target.value as 'monthly' | 'yearly')}
+                className="input-base"
+                style={{ width: 110, flexShrink: 0 }}
+              >
+                <option value="monthly">/ Aylık</option>
+                <option value="yearly">/ Yıllık</option>
+              </select>
+            </div>
+          </Field>
+
+          {/* Location */}
+          <Field label="Konum">
+            <input value={location} onChange={e => setLocation(e.target.value)} placeholder="İstanbul, Remote..." className="input-base" />
+          </Field>
+
+          {/* Deadline + Applied date */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Son Başvuru Tarihi">
+              <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="input-base" />
+            </Field>
+            <Field label="Başvuru Tarihi">
+              <input type="date" value={appliedDate} onChange={e => setAppliedDate(e.target.value)} className="input-base" />
+            </Field>
+          </div>
+
+          {/* Interview date — only when status is interview */}
+          {status === 'interview' && (
+            <Field label="Mülakat Tarihi">
+              <input type="date" value={interviewDate} onChange={e => setInterviewDate(e.target.value)} className="input-base" />
+            </Field>
+          )}
+
+          {/* URL */}
           <Field label="İlan Linki">
             <input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." className="input-base" />
           </Field>
 
+          {/* Notes */}
           <Field label="Notlar">
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Mülakat tarihi, recruiter adı..." rows={3} className="input-base resize-none" />
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Recruiter adı, süreç notları..." rows={3} className="input-base resize-none" />
           </Field>
 
           {error && (
@@ -173,7 +263,6 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
           </div>
         </form>
       </div>
-
     </div>
   )
 }
