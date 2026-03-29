@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 import GoogleSignInButton from './GoogleSignInButton'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default async function LoginPage() {
   const supabase = createClient()
@@ -10,10 +11,13 @@ export default async function LoginPage() {
   if (user) redirect('/dashboard')
 
   return (
-    <main className="min-h-screen flex" style={{ background: 'var(--navy)' }}>
+    <main className="min-h-screen flex" style={{ background: 'var(--bg-base)' }}>
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-14" style={{ background: 'var(--navy-light)' }}>
-        <Image src="/logo.png" alt="Trackruit" width={140} height={40} className="h-9 w-auto brightness-0 invert" />
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-14" style={{ background: 'var(--navy)' }}>
+        <div className="flex items-center gap-3">
+          <Image src="/logo/trackruit-mark-on-dark.png" alt="Trackruit" width={319} height={342} style={{ height: 40, width: 'auto' }} />
+          <span className="text-lg font-semibold tracking-wide" style={{ color: 'rgba(255,255,255,0.90)', letterSpacing: '-0.01em' }}>trackruit</span>
+        </div>
 
         <div>
           <p className="text-4xl font-light leading-snug" style={{ color: 'rgba(255,255,255,0.92)', letterSpacing: '-0.02em' }}>
@@ -36,13 +40,16 @@ export default async function LoginPage() {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6 relative">
+        <div className="absolute top-5 right-5">
+          <ThemeToggle />
+        </div>
         <div
           className="w-full max-w-sm rounded-2xl p-10 flex flex-col gap-8"
-          style={{ background: 'var(--card)', boxShadow: '0 32px 80px rgba(0,0,0,0.35)' }}
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border-strong)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}
         >
           <div className="lg:hidden flex justify-center">
-            <Image src="/logo.png" alt="Trackruit" width={130} height={36} className="h-8 w-auto" />
+            <Image src="/logo/trackruit-mark-on-dark.png" alt="Trackruit" width={319} height={342} style={{ height: 36, width: 'auto' }} />
           </div>
 
           <div>

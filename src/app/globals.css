@@ -4,30 +4,123 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
 
-:root {
-  --navy: #0B2240;
+/* ─────────────────────────────────────────────────────────────────────────
+   DARK MODE (default / current theme)
+   To switch to light, set data-theme="light" on <html>
+   ───────────────────────────────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  /* Backgrounds — layered from deepest to most raised */
+  --bg-base:    #07111D;   /* page background */
+  --bg-surface: #0B1929;   /* inset sections, input bg */
+  --bg-card:    #0F2035;   /* cards, panels */
+  --bg-raised:  #172D47;   /* hover states, elevated elements */
+  --bg-overlay: rgba(4, 10, 20, 0.75); /* modal backdrop */
+
+  /* Borders */
+  --border:        rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Brand colors (theme-invariant) */
+  --navy:       #0B2240;
   --navy-light: #0B2740;
-  --teal: #0AA696;
-  --teal-dark: #0D6973;
-  --surface: #F4F6F9;
-  --card: #ffffff;
-  --border: #E4E8EF;
-  --text-primary: #0F1A2E;
-  --text-secondary: #5A6680;
-  --text-muted: #9AA3B4;
+  --teal:       #0AA696;
+  --teal-mid:   #0D8C8C;
+  --teal-dark:  #0D6973;
+  --teal-glow:  rgba(10, 166, 150, 0.15);
+
+  /* Text */
+  --text-primary:   #E4EEFF;
+  --text-secondary: #6E91B5;
+  --text-muted:     #324F6A;
+
+  /* Semantic aliases (backwards compat) */
+  --surface: var(--bg-surface);
+  --card:    var(--bg-card);
+
+  /* Status — dark-friendly tints */
+  --status-wishlist-bg:   rgba(148, 163, 184, 0.10);
+  --status-wishlist-text: #94A3B8;
+  --status-applied-bg:    rgba(59, 130, 246, 0.12);
+  --status-applied-text:  #60A5FA;
+  --status-interview-bg:  rgba(245, 158, 11, 0.12);
+  --status-interview-text:#FBBF24;
+  --status-offered-bg:    rgba(16, 185, 129, 0.12);
+  --status-offered-text:  #34D399;
+  --status-rejected-bg:   rgba(239, 68, 68, 0.12);
+  --status-rejected-text: #F87171;
 }
 
-* {
-  box-sizing: border-box;
+/* ─────────────────────────────────────────────────────────────────────────
+   LIGHT MODE (future — add data-theme="light" to <html> to activate)
+   ───────────────────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-base:    #F0F4FA;
+  --bg-surface: #EBF0F7;
+  --bg-card:    #FFFFFF;
+  --bg-raised:  #F5F8FC;
+  --bg-overlay: rgba(11, 34, 64, 0.45);
+
+  --border:        #E2E8F2;
+  --border-strong: #C8D4E4;
+
+  --text-primary:   #0F1A2E;
+  --text-secondary: #4A6280;
+  --text-muted:     #8FA3BA;
+
+  --surface: var(--bg-surface);
+  --card:    var(--bg-card);
+
+  --status-wishlist-bg:   #F1F5F9;
+  --status-wishlist-text: #475569;
+  --status-applied-bg:    #EFF6FF;
+  --status-applied-text:  #1D4ED8;
+  --status-interview-bg:  #FFFBEB;
+  --status-interview-text:#B45309;
+  --status-offered-bg:    #ECFDF5;
+  --status-offered-text:  #065F46;
+  --status-rejected-bg:   #FEF2F2;
+  --status-rejected-text: #B91C1C;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BASE
+   ───────────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { background: var(--bg-base); }
 
 body {
   font-family: 'DM Sans', -apple-system, sans-serif;
-  background: var(--surface);
+  background: var(--bg-base);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   GLOBAL UTILITIES
+   ───────────────────────────────────────────────────────────────────────── */
+.input-base {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  border: 1.5px solid var(--border-strong);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input-base::placeholder { color: var(--text-muted); }
+.input-base:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-glow);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ANIMATIONS
+   ───────────────────────────────────────────────────────────────────────── */
 @keyframes modal-in {
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -43,35 +136,24 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-modal {
-  animation: modal-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+.animate-modal    { animation: modal-in    0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-backdrop { animation: backdrop-in 0.15s ease forwards; }
 
-.animate-backdrop {
-  animation: backdrop-in 0.15s ease forwards;
-}
+.card-stagger > * { animation: card-in 0.25s ease both; }
+.card-stagger > *:nth-child(1)   { animation-delay:  0ms; }
+.card-stagger > *:nth-child(2)   { animation-delay: 40ms; }
+.card-stagger > *:nth-child(3)   { animation-delay: 80ms; }
+.card-stagger > *:nth-child(4)   { animation-delay: 120ms; }
+.card-stagger > *:nth-child(5)   { animation-delay: 160ms; }
+.card-stagger > *:nth-child(6)   { animation-delay: 200ms; }
+.card-stagger > *:nth-child(7)   { animation-delay: 240ms; }
+.card-stagger > *:nth-child(8)   { animation-delay: 280ms; }
+.card-stagger > *:nth-child(n+9) { animation-delay: 320ms; }
 
-.card-stagger > * {
-  animation: card-in 0.25s ease both;
-}
-
-.card-stagger > *:nth-child(1)  { animation-delay: 0ms; }
-.card-stagger > *:nth-child(2)  { animation-delay: 40ms; }
-.card-stagger > *:nth-child(3)  { animation-delay: 80ms; }
-.card-stagger > *:nth-child(4)  { animation-delay: 120ms; }
-.card-stagger > *:nth-child(5)  { animation-delay: 160ms; }
-.card-stagger > *:nth-child(6)  { animation-delay: 200ms; }
-.card-stagger > *:nth-child(7)  { animation-delay: 240ms; }
-.card-stagger > *:nth-child(8)  { animation-delay: 280ms; }
-.card-stagger > *:nth-child(n+9){ animation-delay: 320ms; }
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--teal) !important;
-  box-shadow: 0 0 0 3px rgba(0, 184, 169, 0.12);
-}
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* ─────────────────────────────────────────────────────────────────────────
+   SCROLLBAR
+   ───────────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }

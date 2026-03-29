@@ -17,17 +17,17 @@ export default function GoogleSignInButton() {
       onClick={handleSignIn}
       className="group flex items-center justify-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150"
       style={{
-        border: '1.5px solid var(--border)',
+        border: '1.5px solid var(--border-strong)',
         color: 'var(--text-primary)',
-        background: 'white',
+        background: 'var(--bg-raised)',
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--teal)'
-        ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(10,166,150,0.04)'
+        ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--teal-glow)'
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)'
-        ;(e.currentTarget as HTMLButtonElement).style.background = 'white'
+        (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)'
+        ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-raised)'
       }}
     >
       <GoogleIcon />

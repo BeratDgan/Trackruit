@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
+import ThemeToggle from './ThemeToggle'
 
 interface NavbarProps {
   user: User
@@ -27,12 +28,12 @@ export default function Navbar({ user }: NavbarProps) {
     <header
       className="h-14 px-6 flex items-center justify-between sticky top-0 z-30"
       style={{
-        background: 'rgba(255,255,255,0.92)',
+        background: 'rgba(7, 17, 29, 0.85)',
         borderBottom: '1px solid var(--border)',
-        backdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(16px)',
       }}
     >
-      <Image src="/logo.png" alt="Trackruit" width={120} height={32} priority className="h-7 w-auto" />
+      <Image src="/logo/trackruit-on-dark.png" alt="Trackruit" width={1782} height={470} priority style={{ height: 28, width: 'auto' }} />
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2.5">
@@ -60,12 +61,16 @@ export default function Navbar({ user }: NavbarProps) {
 
         <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
 
+        <ThemeToggle />
+
+        <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
+
         <button
           onClick={handleSignOut}
           className="text-sm px-3 py-1.5 rounded-lg transition-colors"
           style={{ color: 'var(--text-secondary)' }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface)'
+            (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-raised)'
             ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
           }}
           onMouseLeave={e => {
