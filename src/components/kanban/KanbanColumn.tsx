@@ -108,7 +108,7 @@ export function KanbanCard({
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderLeft: `3px solid ${cfg.accent}`,
-        opacity: isDragging ? 0 : deleting ? 0.4 : 1,
+        opacity: isDragging ? 0.5 : deleting ? 0.4 : 1,
         boxShadow: isOverlay
           ? '0 16px 40px rgba(11,34,64,0.16), 0 4px 12px rgba(11,34,64,0.08)'
           : '0 1px 3px rgba(11,34,64,0.04)',
