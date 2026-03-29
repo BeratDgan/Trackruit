@@ -45,7 +45,7 @@ export default function KanbanBoard({
   // Unique locations derived from data
   const locations = useMemo(() => {
     const locs = applications.map(a => a.location).filter(Boolean) as string[]
-    return [...new Set(locs)].sort()
+    return Array.from(new Set(locs)).sort()
   }, [applications])
 
   // Client-side filtering (AND logic)
