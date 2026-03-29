@@ -67,9 +67,9 @@ export function KanbanCard({
   const [deleting, setDeleting] = useState(false)
   const cfg = STATUS_CONFIG[app.status]
 
-  const deadline  = deadlineBadge(app.deadline)
+  const deadline  = app.status === 'wishlist' ? deadlineBadge(app.deadline) : null
   const interview = interviewBadge(app.interview_date)
-  const hasBadges = !isOverlay && (deadline || interview)
+  const hasBadges = !isOverlay && (!!deadline || !!interview)
 
   async function handleDelete() {
     setDeleting(true)
