@@ -14,6 +14,7 @@ import {
 } from '@dnd-kit/core'
 import type { Application, ApplicationStatus } from '@/lib/types'
 import { KanbanColumn, KanbanCard } from './KanbanColumn'
+import ImportModal from '@/components/ImportModal'
 
 const COLUMNS: ApplicationStatus[] = ['wishlist', 'applied', 'interview', 'offered', 'rejected']
 
@@ -23,17 +24,20 @@ export default function KanbanBoard({
   onEdit,
   onDeleted,
   onAdd,
+  onImported,
 }: {
   applications: Application[]
   onStatusChange: (id: string, newStatus: ApplicationStatus, prevStatus: ApplicationStatus) => void
   onEdit: (app: Application) => void
   onDeleted: (id: string) => void
   onAdd?: () => void
+  onImported?: (apps: Application[]) => void
 }) {
-  const [activeApp, setActiveApp]         = useState<Application | null>(null)
-  const [errorMsg, setErrorMsg]           = useState<string | null>(null)
-  const [query, setQuery]                 = useState('')
+  const [activeApp, setActiveApp]           = useState<Application | null>(null)
+  const [errorMsg, setErrorMsg]             = useState<string | null>(null)
+  const [query, setQuery]                   = useState('')
   const [locationFilter, setLocationFilter] = useState('all')
+  const [importOpen, setImportOpen]         = useState(false)
 
   // Auto-dismiss error toast
   useEffect(() => {
@@ -185,7 +189,36 @@ export default function KanbanBoard({
             {filtered.length} sonuç
           </span>
         )}
+
+        {/* Import button */}
+        <button
+          onClick={() => setImportOpen(true)}
+          className="flex-shrink-0 flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium transition-colors"
+          style={{
+            height: 36,
+            border: '1px solid var(--border-strong)',
+            color: 'var(--text-secondary)',
+            background: 'transparent',
+            whiteSpace: 'nowrap',
+            marginLeft: 'auto',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--teal-glow)'; e.currentTarget.style.borderColor = 'var(--teal)'; e.currentTarget.style.color = 'var(--teal)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
+          title="Excel veya CSV'den içe aktar"
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M1 11h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          İçe Aktar
+        </button>
       </div>
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={apps => { onImported?.(apps); setImportOpen(false) }}
+      />
 
       {/* ── Columns ───────────────────────────────────────────────────────── */}
       <div className="flex gap-3 overflow-x-auto pb-6" style={{ minHeight: 'calc(100vh - 260px)' }}>

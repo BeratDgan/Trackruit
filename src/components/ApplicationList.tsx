@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Application, ApplicationStatus } from '@/lib/types'
 import ApplicationModal from './NewApplicationModal'
 import KanbanBoard from './kanban/KanbanBoard'
@@ -68,6 +68,7 @@ export default function ApplicationList({ initialApplications }: { initialApplic
           onEdit={openEdit}
           onDeleted={handleDeleted}
           onAdd={openNew}
+          onImported={apps => setApplications(prev => [...apps, ...prev])}
         />
         {modal}
       </div>
@@ -186,14 +187,21 @@ function ViewBtn({ active, onClick, title, children }: {
 
 // ── Application card (list view) ──────────────────────────────────────────────
 
+type CLState = 'idle' | 'loading' | 'input' | 'result'
+
 function ApplicationCard({ application: app, onEdit, onDeleted }: {
   application: Application
   onEdit: () => void
   onDeleted: () => void
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const cfg = STATUS_CONFIG[app.status]
+  const [deleting, setDeleting]           = useState(false)
+  const [clState, setClState]             = useState<CLState>('idle')
+  const [coverLetter, setCoverLetter]     = useState('')
+  const [jobDesc, setJobDesc]             = useState('')
+  const [clError, setClError]             = useState<string | null>(null)
+  const [copied, setCopied]               = useState(false)
+  const cfg    = STATUS_CONFIG[app.status]
   const salary = formatSalary(app.salary, app.salary_period)
 
   async function handleDelete() {
@@ -207,128 +215,346 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
     }
   }
 
+  async function requestCoverLetter(jobDescription?: string) {
+    setClState('loading')
+    setClError(null)
+    try {
+      const res = await fetch('/api/generate-cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId: app.id, jobDescription }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Bir hata oluştu')
+      if (data.needsManualInput) { setClState('input'); return }
+      setCoverLetter(data.coverLetter)
+      setClState('result')
+    } catch (err) {
+      setClError(err instanceof Error ? err.message : 'Bir hata oluştu')
+      setClState('idle')
+    }
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(coverLetter).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   const displayDate = app.applied_date
     ? `Başv. ${formatDate(app.applied_date)}`
     : formatDate(app.created_at)
 
   return (
-    <div
-      className="group flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all"
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        opacity: deleting ? 0.5 : 1,
-      }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(10,166,150,0.25)')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-    >
-      {/* Status dot */}
-      <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: cfg.dot }} />
+    <>
+      <div
+        className="group flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all"
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          opacity: deleting ? 0.5 : 1,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(10,166,150,0.25)')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+      >
+        {/* Status dot */}
+        <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ background: cfg.dot }} />
 
-      {/* Company + position + location */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-          {app.company}
-        </p>
-        <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-          {app.position}
-        </p>
-        {app.location && (
-          <p className="text-xs truncate mt-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
-              <path d="M6 1a3.5 3.5 0 013.5 3.5C9.5 7.5 6 11 6 11S2.5 7.5 2.5 4.5A3.5 3.5 0 016 1z" stroke="currentColor" strokeWidth="1.2"/>
-              <circle cx="6" cy="4.5" r="1" fill="currentColor"/>
-            </svg>
-            {app.location}
+        {/* Company + position + location */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+            {app.company}
           </p>
+          <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            {app.position}
+          </p>
+          {app.location && (
+            <p className="text-xs truncate mt-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+              <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                <path d="M6 1a3.5 3.5 0 013.5 3.5C9.5 7.5 6 11 6 11S2.5 7.5 2.5 4.5A3.5 3.5 0 016 1z" stroke="currentColor" strokeWidth="1.2"/>
+                <circle cx="6" cy="4.5" r="1" fill="currentColor"/>
+              </svg>
+              {app.location}
+            </p>
+          )}
+        </div>
+
+        {/* Salary */}
+        {salary && (
+          <span className="flex-shrink-0 text-xs font-medium hidden md:block" style={{ color: 'var(--status-offered-text)' }}>
+            {salary}
+          </span>
+        )}
+
+        {/* Status badge */}
+        <span
+          className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium hidden sm:block"
+          style={{ background: cfg.bg, color: cfg.text }}
+        >
+          {cfg.label}
+        </span>
+
+        {/* URL */}
+        {app.url && (
+          <a
+            href={app.url} target="_blank" rel="noopener noreferrer"
+            className="flex-shrink-0 hidden md:flex items-center gap-1 text-xs transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--teal)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+            onClick={e => e.stopPropagation()}
+          >
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path d="M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7M8 1h3m0 0v3m0-3L5 7" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            İlan
+          </a>
+        )}
+
+        {/* Date */}
+        <span className="flex-shrink-0 text-xs hidden sm:block" style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+          {displayDate}
+        </span>
+
+        {/* Actions */}
+        {confirmDelete ? (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Silinsin mi?</span>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium text-white disabled:opacity-60"
+              style={{ background: 'var(--status-rejected-text)' }}
+            >
+              {deleting ? '…' : 'Evet'}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium"
+              style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+            >
+              Hayır
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Cover Letter */}
+            <button
+              onClick={() => requestCoverLetter()}
+              disabled={clState === 'loading'}
+              className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--teal-glow)'; e.currentTarget.style.color = 'var(--teal)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              title="Ön Yazı Oluştur"
+            >
+              {clState === 'loading' ? (
+                <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3"/>
+                  <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.25"/>
+                  <path d="M4 4h6M4 7h6M4 10h3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round"/>
+                </svg>
+              )}
+            </button>
+
+            {/* Edit */}
+            <button
+              onClick={onEdit}
+              className="h-7 w-7 rounded-lg flex items-center justify-center"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-applied-bg)'; e.currentTarget.style.color = 'var(--status-applied-text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              title="Düzenle"
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path d="M9.5 1.5l3 3L4 13H1v-3L9.5 1.5z" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {/* Delete */}
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="h-7 w-7 rounded-lg flex items-center justify-center"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-rejected-bg)'; e.currentTarget.style.color = 'var(--status-rejected-text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              title="Sil"
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path d="M1 3.5h12M5 3.5V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1m1.5 0l-.6 8a1 1 0 01-1 .93H5.1a1 1 0 01-1-.93l-.6-8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Salary — desktop only */}
-      {salary && (
-        <span className="flex-shrink-0 text-xs font-medium hidden md:block" style={{ color: 'var(--status-offered-text)' }}>
-          {salary}
-        </span>
+      {/* Error toast */}
+      {clError && (
+        <p className="text-xs px-3 py-2 rounded-lg -mt-1" style={{ background: 'var(--status-rejected-bg)', color: 'var(--status-rejected-text)' }}>
+          {clError}
+        </p>
       )}
 
-      {/* Status badge */}
-      <span
-        className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium hidden sm:block"
-        style={{ background: cfg.bg, color: cfg.text }}
+      {/* ── Job description input modal ── */}
+      {clState === 'input' && (
+        <CLModal onClose={() => setClState('idle')} title="İlan Metnini Yapıştır">
+          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+            İlan linki otomatik okunamadı. İş ilanı metnini aşağıya yapıştır.
+          </p>
+          <textarea
+            className="input-base resize-none"
+            rows={8}
+            value={jobDesc}
+            onChange={e => setJobDesc(e.target.value)}
+            placeholder="İş ilanı içeriğini buraya yapıştır..."
+            autoFocus
+          />
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => setClState('idle')}
+              className="flex-1 py-2 rounded-xl text-sm font-medium"
+              style={{ border: '1.5px solid var(--border-strong)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-raised)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              İptal
+            </button>
+            <button
+              onClick={() => { setJobDesc(''); requestCoverLetter(jobDesc) }}
+              disabled={!jobDesc.trim()}
+              className="flex-1 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50"
+              style={{ background: 'var(--teal)' }}
+            >
+              Oluştur
+            </button>
+          </div>
+        </CLModal>
+      )}
+
+      {/* ── Result modal ── */}
+      {clState === 'result' && (
+        <CLModal onClose={() => setClState('idle')} title={`Ön Yazı — ${app.company}`} wide>
+          <textarea
+            className="input-base resize-none font-mono"
+            rows={14}
+            value={coverLetter}
+            onChange={e => setCoverLetter(e.target.value)}
+            style={{ fontSize: '12px', lineHeight: '1.6' }}
+          />
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => requestCoverLetter()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium"
+              style={{ border: '1.5px solid var(--border-strong)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-raised)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                <path d="M1 7A6 6 0 1112.5 4M13 1v4H9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Yenile
+            </button>
+            <div className="flex-1" />
+            <button
+              onClick={() => setClState('idle')}
+              className="px-4 py-2 rounded-xl text-sm font-medium"
+              style={{ border: '1.5px solid var(--border-strong)', color: 'var(--text-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-raised)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              Kapat
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all"
+              style={{ background: copied ? '#22c55e' : 'var(--teal)' }}
+            >
+              {copied ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Kopyalandı
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="white" strokeWidth="1.2"/>
+                    <path d="M4 8H3a1 1 0 01-1-1V3a1 1 0 011-1h4a1 1 0 011 1v1" stroke="white" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  Kopyala
+                </>
+              )}
+            </button>
+          </div>
+        </CLModal>
+      )}
+    </>
+  )
+}
+
+// ── Cover letter modal shell ──────────────────────────────────────────────────
+
+function CLModal({ children, onClose, title, wide }: {
+  children: React.ReactNode
+  onClose: () => void
+  title: string
+  wide?: boolean
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-backdrop"
+      style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(6px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        ref={ref}
+        className="w-full animate-modal"
+        style={{
+          maxWidth: wide ? 640 : 480,
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-strong)',
+          borderRadius: 20,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        }}
       >
-        {cfg.label}
-      </span>
-
-      {/* URL */}
-      {app.url && (
-        <a
-          href={app.url} target="_blank" rel="noopener noreferrer"
-          className="flex-shrink-0 hidden md:flex items-center gap-1 text-xs transition-colors"
-          style={{ color: 'var(--text-muted)' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--teal)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-          onClick={e => e.stopPropagation()}
-        >
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-            <path d="M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7M8 1h3m0 0v3m0-3L5 7" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          İlan
-        </a>
-      )}
-
-      {/* Date */}
-      <span className="flex-shrink-0 text-xs hidden sm:block" style={{ color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-        {displayDate}
-      </span>
-
-      {/* Actions */}
-      {confirmDelete ? (
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Silinsin mi?</span>
+        <div className="flex items-center justify-between px-6 pt-5 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--teal-glow)', border: '1px solid var(--teal)' }}>
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <rect x="1" y="1" width="12" height="12" rx="2" stroke="var(--teal)" strokeWidth="1.3"/>
+                <path d="M4 4h6M4 7h6M4 10h3" stroke="var(--teal)" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <h2 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)', maxWidth: 320 }}>{title}</h2>
+          </div>
           <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="px-2.5 py-1 rounded-lg text-xs font-medium text-white disabled:opacity-60"
-            style={{ background: 'var(--status-rejected-text)' }}
-          >
-            {deleting ? '…' : 'Evet'}
-          </button>
-          <button
-            onClick={() => setConfirmDelete(false)}
-            className="px-2.5 py-1 rounded-lg text-xs font-medium"
-            style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-          >
-            Hayır
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onEdit}
-            className="h-7 w-7 rounded-lg flex items-center justify-center"
+            onClick={onClose}
+            className="h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-applied-bg)'; e.currentTarget.style.color = 'var(--status-applied-text)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
-            title="Düzenle"
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-raised)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-              <path d="M9.5 1.5l3 3L4 13H1v-3L9.5 1.5z" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="h-7 w-7 rounded-lg flex items-center justify-center"
-            style={{ color: 'var(--text-muted)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-rejected-bg)'; e.currentTarget.style.color = 'var(--status-rejected-text)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
-            title="Sil"
-          >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-              <path d="M1 3.5h12M5 3.5V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1m1.5 0l-.6 8a1 1 0 01-1 .93H5.1a1 1 0 01-1-.93l-.6-8" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
             </svg>
           </button>
         </div>
-      )}
+        <div className="p-6">{children}</div>
+      </div>
     </div>
   )
 }
