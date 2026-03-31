@@ -16,12 +16,14 @@
     "@supabase/supabase-js": "^2.100.1",
     "next": "14.2.35",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/xlsx": "^0.0.35",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",

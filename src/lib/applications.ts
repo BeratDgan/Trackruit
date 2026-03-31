@@ -74,6 +74,35 @@ export async function updateApplication(
   return data
 }
 
+export async function bulkCreateApplications(
+  userId: string,
+  rows: Array<{
+    company: string
+    position: string
+    status: ApplicationStatus
+    url?: string | null
+    notes?: string | null
+    salary?: number | null
+    salary_period?: 'monthly' | 'yearly' | null
+    location?: string | null
+    deadline?: string | null
+    applied_date?: string | null
+    interview_date?: string | null
+  }>
+): Promise<Application[]> {
+  const supabase = createClient()
+
+  const records = rows.map(r => ({ ...r, user_id: userId }))
+  const { data, error } = await supabase
+    .from('applications')
+    .insert(records)
+    .select()
+
+  if (error) throw new Error(error.message)
+
+  return data
+}
+
 export async function deleteApplication(id: string): Promise<void> {
   const supabase = createClient()
 

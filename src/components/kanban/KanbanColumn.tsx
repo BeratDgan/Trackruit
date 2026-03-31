@@ -10,57 +10,17 @@ export const STATUS_CONFIG: Record<
     label: string
     accent: string
     dot: string
-    bg: string      // CSS var — drop zone tint
-    text: string    // CSS var — text/icon color
-    pillBg: string  // CSS var — count pill background
+    bg: string
+    text: string
+    pillBg: string
     emptyIcon: string
   }
 > = {
-  wishlist:  {
-    label: 'İstek Listesi',
-    accent: '#94A3B8',
-    dot: '#94A3B8',
-    bg: 'var(--status-wishlist-bg)',
-    text: 'var(--status-wishlist-text)',
-    pillBg: 'var(--status-wishlist-bg)',
-    emptyIcon: '✦',
-  },
-  applied:   {
-    label: 'Başvuruldu',
-    accent: '#60A5FA',
-    dot: '#60A5FA',
-    bg: 'var(--status-applied-bg)',
-    text: 'var(--status-applied-text)',
-    pillBg: 'var(--status-applied-bg)',
-    emptyIcon: '↗',
-  },
-  interview: {
-    label: 'Mülakat',
-    accent: '#FBBF24',
-    dot: '#FBBF24',
-    bg: 'var(--status-interview-bg)',
-    text: 'var(--status-interview-text)',
-    pillBg: 'var(--status-interview-bg)',
-    emptyIcon: '◎',
-  },
-  offered:   {
-    label: 'Teklif Alındı',
-    accent: '#34D399',
-    dot: '#34D399',
-    bg: 'var(--status-offered-bg)',
-    text: 'var(--status-offered-text)',
-    pillBg: 'var(--status-offered-bg)',
-    emptyIcon: '★',
-  },
-  rejected:  {
-    label: 'Reddedildi',
-    accent: '#F87171',
-    dot: '#F87171',
-    bg: 'var(--status-rejected-bg)',
-    text: 'var(--status-rejected-text)',
-    pillBg: 'var(--status-rejected-bg)',
-    emptyIcon: '×',
-  },
+  wishlist:  { label: 'İstek Listesi', accent: '#94A3B8', dot: '#94A3B8', bg: 'var(--status-wishlist-bg)',  text: 'var(--status-wishlist-text)',  pillBg: 'var(--status-wishlist-bg)',  emptyIcon: '✦' },
+  applied:   { label: 'Başvuruldu',    accent: '#60A5FA', dot: '#60A5FA', bg: 'var(--status-applied-bg)',   text: 'var(--status-applied-text)',   pillBg: 'var(--status-applied-bg)',   emptyIcon: '↗' },
+  interview: { label: 'Mülakat',       accent: '#FBBF24', dot: '#FBBF24', bg: 'var(--status-interview-bg)', text: 'var(--status-interview-text)', pillBg: 'var(--status-interview-bg)', emptyIcon: '◎' },
+  offered:   { label: 'Teklif Alındı', accent: '#34D399', dot: '#34D399', bg: 'var(--status-offered-bg)',   text: 'var(--status-offered-text)',   pillBg: 'var(--status-offered-bg)',   emptyIcon: '★' },
+  rejected:  { label: 'Reddedildi',    accent: '#F87171', dot: '#F87171', bg: 'var(--status-rejected-bg)',  text: 'var(--status-rejected-text)',  pillBg: 'var(--status-rejected-bg)',  emptyIcon: '×' },
 }
 
 function formatDate(iso: string) {
@@ -69,6 +29,24 @@ function formatDate(iso: string) {
 
 function initials(name: string) {
   return name.trim().slice(0, 2).toUpperCase()
+}
+
+// ── Deadline badge ─────────────────────────────────────────────────────────
+
+type BadgeStyle = { label: string; color: string; bg: string; dotColor: string }
+
+function deadlineBadge(deadline: string | null | undefined): BadgeStyle | null {
+  if (!deadline) return null
+  const diff = Math.ceil((new Date(deadline).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000)
+  if (diff < 0)  return { label: 'Süresi Doldu', color: 'var(--text-muted)',              bg: 'var(--bg-raised)',           dotColor: 'var(--text-muted)' }
+  if (diff < 3)  return { label: `${diff}g kaldı`, color: 'var(--status-rejected-text)',  bg: 'var(--status-rejected-bg)',  dotColor: 'var(--status-rejected-text)' }
+  if (diff <= 7) return { label: `${diff}g kaldı`, color: 'var(--status-interview-text)', bg: 'var(--status-interview-bg)', dotColor: 'var(--status-interview-text)' }
+  return           { label: `${diff}g kaldı`, color: 'var(--status-offered-text)',  bg: 'var(--status-offered-bg)',  dotColor: 'var(--status-offered-text)' }
+}
+
+function interviewBadge(interviewDate: string | null | undefined): string | null {
+  if (!interviewDate) return null
+  return new Date(interviewDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
 }
 
 // ── Draggable Card ──────────────────────────────────────────────────────────
@@ -89,6 +67,10 @@ export function KanbanCard({
   const [deleting, setDeleting] = useState(false)
   const cfg = STATUS_CONFIG[app.status]
 
+  const deadline  = app.status === 'wishlist' ? deadlineBadge(app.deadline) : null
+  const interview = interviewBadge(app.interview_date)
+  const hasBadges = !isOverlay && (!!deadline || !!interview)
+
   async function handleDelete() {
     setDeleting(true)
     try {
@@ -103,7 +85,7 @@ export function KanbanCard({
   return (
     <div
       ref={setNodeRef}
-      className="group relative flex flex-col gap-3 p-3.5 rounded-xl cursor-grab active:cursor-grabbing select-none"
+      className="group relative flex flex-col gap-2.5 p-3.5 rounded-xl cursor-grab active:cursor-grabbing select-none"
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
@@ -113,48 +95,30 @@ export function KanbanCard({
           ? '0 16px 40px rgba(11,34,64,0.16), 0 4px 12px rgba(11,34,64,0.08)'
           : '0 1px 3px rgba(11,34,64,0.04)',
         transform: isOverlay ? 'rotate(2deg) scale(1.02)' : undefined,
-        transition: isDragging ? 'none' : 'box-shadow 0.15s ease, border-color 0.15s ease',
+        transition: isDragging ? 'none' : 'box-shadow 0.15s ease',
       }}
-      onMouseEnter={e => {
-        if (!isDragging && !isOverlay)
-          (e.currentTarget.style.boxShadow = '0 4px 12px rgba(11,34,64,0.09), 0 1px 3px rgba(11,34,64,0.05)')
-      }}
-      onMouseLeave={e => {
-        if (!isOverlay)
-          (e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)')
-      }}
+      onMouseEnter={e => { if (!isDragging && !isOverlay) e.currentTarget.style.boxShadow = '0 4px 12px rgba(11,34,64,0.09), 0 1px 3px rgba(11,34,64,0.05)' }}
+      onMouseLeave={e => { if (!isOverlay) e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)' }}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
     >
-      {/* Top row: avatar + text */}
+      {/* Top row: avatar + text + actions */}
       <div className="flex items-start gap-2.5">
-        {/* Company initial */}
         <div
           className="flex-shrink-0 h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold"
-          style={{
-            background: cfg.bg,
-            color: cfg.text,
-            letterSpacing: '-0.02em',
-          }}
+          style={{ background: cfg.bg, color: cfg.text, letterSpacing: '-0.02em' }}
         >
           {initials(app.company)}
         </div>
 
         <div className="flex-1 min-w-0">
-          <p
-            className="text-xs font-semibold leading-tight truncate"
-            style={{ color: 'var(--text-primary)' }}
-          >
+          <p className="text-xs font-semibold leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
             {app.company}
           </p>
-          <p
-            className="text-xs leading-tight mt-0.5 truncate"
-            style={{ color: 'var(--text-secondary)' }}
-          >
+          <p className="text-xs leading-tight mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
             {app.position}
           </p>
         </div>
 
-        {/* Actions — visible on hover, isolated from drag */}
         {!isOverlay && (
           <div
             className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
@@ -166,14 +130,8 @@ export function KanbanCard({
                   onClick={onEdit}
                   className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
                   style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'var(--status-applied-bg)'
-                    e.currentTarget.style.color = 'var(--status-applied-text)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = 'var(--text-muted)'
-                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-applied-bg)'; e.currentTarget.style.color = 'var(--status-applied-text)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
                   title="Düzenle"
                 >
                   <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
@@ -184,14 +142,8 @@ export function KanbanCard({
                   onClick={() => setConfirmDelete(true)}
                   className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
                   style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'var(--status-rejected-bg)'
-                    e.currentTarget.style.color = 'var(--status-rejected-text)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = 'var(--text-muted)'
-                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-rejected-bg)'; e.currentTarget.style.color = 'var(--status-rejected-text)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
                   title="Sil"
                 >
                   <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
@@ -221,6 +173,38 @@ export function KanbanCard({
           </div>
         )}
       </div>
+
+      {/* Badges row */}
+      {hasBadges && (
+        <div className="flex flex-wrap gap-1.5">
+          {deadline && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium"
+              style={{ background: deadline.bg, color: deadline.color, fontSize: '10px', letterSpacing: '0.01em' }}
+            >
+              {/* clock icon */}
+              <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M6 3.5V6l1.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              {deadline.label}
+            </span>
+          )}
+          {interview && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium"
+              style={{ background: 'var(--status-interview-bg)', color: 'var(--status-interview-text)', fontSize: '10px', letterSpacing: '0.01em' }}
+            >
+              {/* calendar icon */}
+              <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                <rect x="1" y="2.5" width="10" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M1 5.5h10M4 1v3M8 1v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              {interview}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Bottom row: date + link */}
       <div className="flex items-center justify-between">
@@ -282,23 +266,12 @@ export function KanbanColumn({
       <div style={{ height: 3, background: cfg.accent }} />
 
       {/* Column header */}
-      <div
-        className="flex items-center justify-between px-3.5 py-3"
-        style={{ borderBottom: '1px solid var(--border)' }}
-      >
-        <div className="flex items-center gap-2">
-          <span
-            className="text-xs font-semibold tracking-wide"
-            style={{ color: cfg.text, letterSpacing: '-0.01em' }}
-          >
-            {cfg.label}
-          </span>
-        </div>
+      <div className="flex items-center justify-between px-3.5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        <span className="text-xs font-semibold" style={{ color: cfg.text, letterSpacing: '-0.01em' }}>
+          {cfg.label}
+        </span>
         <div className="flex items-center gap-1.5">
-          <span
-            className="text-xs font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: cfg.pillBg, color: cfg.text }}
-          >
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: cfg.pillBg, color: cfg.text }}>
             {applications.length}
           </span>
           {onAdd && (
@@ -320,10 +293,7 @@ export function KanbanColumn({
       <div
         ref={setNodeRef}
         className="flex flex-col gap-2 flex-1 p-2.5 transition-colors duration-150"
-        style={{
-          background: isOver ? cfg.bg : 'transparent',
-          minHeight: 120,
-        }}
+        style={{ background: isOver ? cfg.bg : 'transparent', minHeight: 120 }}
       >
         {applications.map(app => (
           <KanbanCard
@@ -342,10 +312,7 @@ export function KanbanColumn({
               background: isOver ? cfg.bg : 'transparent',
             }}
           >
-            <span
-              className="text-lg font-light select-none"
-              style={{ color: isOver ? cfg.accent : 'var(--border)', lineHeight: 1 }}
-            >
+            <span className="text-lg font-light select-none" style={{ color: isOver ? cfg.accent : 'var(--border)', lineHeight: 1 }}>
               {cfg.emptyIcon}
             </span>
             <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Buraya sürükle</span>

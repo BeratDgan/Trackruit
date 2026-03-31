@@ -44,3 +44,6 @@ CLAUDE.MD
 /public/logo.png
 /public/logo
 /.playwright-mcp
+
+#xlsx
+*.xlsx
