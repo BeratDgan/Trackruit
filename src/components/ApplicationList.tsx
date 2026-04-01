@@ -225,6 +225,7 @@ function ViewBtn({ active, onClick, title, children }: {
 // ── Application card (list view) ──────────────────────────────────────────────
 
 type CLState = 'idle' | 'loading' | 'input' | 'result'
+type CalState = 'idle' | 'loading' | 'success' | 'error' | 'added'
 
 function ApplicationCard({ application: app, onEdit, onDeleted }: {
   application: Application
@@ -238,8 +239,73 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
   const [jobDesc, setJobDesc]             = useState('')
   const [clError, setClError]             = useState<string | null>(null)
   const [copied, setCopied]               = useState(false)
+
+  // Calendar state per event type — initialise from localStorage to persist across renders
+  const lsKey = (type: 'interview' | 'deadline') => `cal_added:${app.id}:${type}`
+  const wasAdded = (type: 'interview' | 'deadline'): boolean => {
+    try { return !!localStorage.getItem(lsKey(type)) } catch { return false }
+  }
+  const [calInterview, setCalInterview]   = useState<CalState>(() => wasAdded('interview') ? 'added' : 'idle')
+  const [calDeadline, setCalDeadline]     = useState<CalState>(() => wasAdded('deadline')  ? 'added' : 'idle')
+  const [calError, setCalError]           = useState<string | null>(null)
+
   const cfg    = STATUS_CONFIG[app.status]
   const salary = formatSalary(app.salary, app.salary_period)
+
+  // Which calendar buttons to show
+  const showInterview = app.status === 'interview' && !!app.interview_date
+  const showDeadline  = (app.status === 'wishlist' || app.status === 'applied') && !!app.deadline
+
+  async function addToCalendar(type: 'interview' | 'deadline') {
+    const date = type === 'interview' ? app.interview_date : app.deadline
+    if (!date) return
+
+    const setState = type === 'interview' ? setCalInterview : setCalDeadline
+    setState('loading')
+    setCalError(null)
+
+    try {
+      const res = await fetch('/api/calendar/add-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company: app.company, position: app.position, type, date }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        if (data?.error === 'reauth_required') {
+          setState('idle')
+          // Incremental auth: request calendar scope, redirect back to current page after
+          const { createClient: createBrowserClient } = await import('@/lib/supabase/client')
+          const supabase = createBrowserClient()
+          const next = window.location.pathname + window.location.search
+          await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+              scopes: 'https://www.googleapis.com/auth/calendar.events',
+              queryParams: { access_type: 'offline', prompt: 'consent' },
+            },
+          })
+          return
+        }
+        setState('error')
+        setCalError('Eklenemedi, tekrar dene')
+        setTimeout(() => { setState('idle'); setCalError(null) }, 3000)
+        return
+      }
+
+      // Persist to localStorage so the button stays "Eklendi ✓" across re-renders
+      try { localStorage.setItem(lsKey(type), data.eventId ?? '1') } catch { /* ignore */ }
+      setState('success')
+      setTimeout(() => setState('added'), 2000)
+    } catch {
+      setState('error')
+      setCalError('Eklenemedi, tekrar dene')
+      setTimeout(() => { setState('idle'); setCalError(null) }, 3000)
+    }
+  }
 
   async function handleDelete() {
     setDeleting(true)
@@ -376,6 +442,24 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
           </div>
         ) : (
           <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Calendar — interview */}
+            {showInterview && (
+              <CalendarButton
+                state={calInterview}
+                idleLabel="Takvime Ekle"
+                onClick={() => addToCalendar('interview')}
+              />
+            )}
+
+            {/* Calendar — deadline */}
+            {showDeadline && (
+              <CalendarButton
+                state={calDeadline}
+                idleLabel="Deadline'ı Ekle"
+                onClick={() => addToCalendar('deadline')}
+              />
+            )}
+
             {/* Cover Letter */}
             <button
               onClick={() => requestCoverLetter()}
@@ -430,10 +514,17 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
         )}
       </div>
 
-      {/* Error toast */}
+      {/* Cover letter error */}
       {clError && (
         <p className="text-xs px-3 py-2 rounded-lg -mt-1" style={{ background: 'var(--status-rejected-bg)', color: 'var(--status-rejected-text)' }}>
           {clError}
+        </p>
+      )}
+
+      {/* Calendar error */}
+      {calError && (
+        <p className="text-xs px-3 py-2 rounded-lg -mt-1" style={{ background: 'var(--status-rejected-bg)', color: 'var(--status-rejected-text)' }}>
+          {calError}
         </p>
       )}
 
@@ -532,6 +623,75 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
         </CLModal>
       )}
     </>
+  )
+}
+
+// ── Calendar button ───────────────────────────────────────────────────────────
+
+function CalendarButton({ state, idleLabel, onClick }: {
+  state: CalState
+  idleLabel: string
+  onClick: () => void
+}) {
+  const disabled = state === 'loading' || state === 'added'
+
+  const color = state === 'success' || state === 'added'
+    ? '#22c55e'
+    : state === 'error'
+    ? '#ef4444'
+    : 'var(--text-muted)'
+
+  const bg = state === 'success' || state === 'added'
+    ? 'rgba(34,197,94,0.1)'
+    : state === 'error'
+    ? 'rgba(239,68,68,0.1)'
+    : 'transparent'
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex items-center gap-1 h-7 px-2 rounded-lg text-xs font-medium transition-all"
+      style={{ color, background: bg }}
+      onMouseEnter={e => {
+        if (disabled || state !== 'idle') return
+        e.currentTarget.style.background = 'rgba(59,130,246,0.1)'
+        e.currentTarget.style.color      = '#60a5fa'
+      }}
+      onMouseLeave={e => {
+        if (disabled || state !== 'idle') return
+        e.currentTarget.style.background = bg
+        e.currentTarget.style.color      = color
+      }}
+      title={idleLabel}
+    >
+      {state === 'loading' ? (
+        <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3"/>
+          <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+        </svg>
+      ) : state === 'success' || state === 'added' ? (
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ) : state === 'error' ? (
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M6 3.5v3M6 8v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+      ) : (
+        /* Calendar + plus icon */
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+          <rect x="1.5" y="2" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M1.5 5.5h11" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M4.5 1v2M9.5 1v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          <path d="M5 8.5h4M7 7v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+      )}
+      <span className="hidden sm:inline">
+        {state === 'success' ? 'Ekleniyor…' : state === 'added' ? 'Eklendi ✓' : state === 'error' ? 'Hata' : idleLabel}
+      </span>
+    </button>
   )
 }
 
