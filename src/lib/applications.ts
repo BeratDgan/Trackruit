@@ -32,6 +32,22 @@ export async function createApplication(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
+  // Enforce free-plan limit
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('plan_type')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.plan_type === 'free') {
+    const { count } = await supabase
+      .from('applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+
+    if ((count ?? 0) >= 20) throw new Error('Free plan limit reached')
+  }
+
   const { data, error } = await supabase
     .from('applications')
     .insert({

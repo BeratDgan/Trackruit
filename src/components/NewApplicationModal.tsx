@@ -114,10 +114,11 @@ interface Props {
   onClose: () => void
   onCreated: (app: Application) => void
   onUpdated: (app: Application) => void
+  onLimitError?: () => void
   editingApp?: Application
 }
 
-export default function ApplicationModal({ open, onClose, onCreated, onUpdated, editingApp }: Props) {
+export default function ApplicationModal({ open, onClose, onCreated, onUpdated, onLimitError, editingApp }: Props) {
   const isEdit = !!editingApp
 
   const [company, setCompany]             = useState('')
@@ -209,8 +210,12 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         })
-        if (!res.ok) throw new Error('Başvuru eklenemedi')
-        onCreated(await res.json())
+        const data = await res.json()
+        if (!res.ok) {
+          if (data?.error === 'Free plan limit reached') { onLimitError?.(); return }
+          throw new Error('Başvuru eklenemedi')
+        }
+        onCreated(data)
       }
       onClose()
     } catch (err) {

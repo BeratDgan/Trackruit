@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import ThemeToggle from './ThemeToggle'
@@ -12,6 +13,7 @@ interface NavbarProps {
 
 export default function Navbar({ user }: NavbarProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
 
   async function handleSignOut() {
@@ -33,7 +35,31 @@ export default function Navbar({ user }: NavbarProps) {
         backdropFilter: 'blur(16px)',
       }}
     >
-      <Image src="/logo/trackruit-on-dark.png" alt="Trackruit" width={1782} height={470} priority style={{ height: 28, width: 'auto' }} />
+      <div className="flex items-center gap-6">
+        <Image src="/logo/trackruit-on-dark.png" alt="Trackruit" width={1782} height={470} priority style={{ height: 28, width: 'auto' }} />
+        <nav className="hidden sm:flex items-center gap-1">
+          {[
+            { href: '/dashboard', label: 'Başvurular' },
+            { href: '/dashboard/analytics', label: 'Analitik' },
+          ].map(({ href, label }) => {
+            const active = pathname === href
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="px-3 py-1.5 rounded-lg text-sm transition-colors"
+                style={{
+                  color: active ? 'var(--teal)' : 'var(--text-secondary)',
+                  background: active ? 'var(--teal-glow)' : 'transparent',
+                  fontWeight: active ? 600 : 400,
+                }}
+              >
+                {label}
+              </Link>
+            )
+          })}
+        </nav>
+      </div>
 
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2.5">
