@@ -1,5 +1,11 @@
 export type ApplicationStatus = 'wishlist' | 'applied' | 'interview' | 'offered' | 'rejected'
 
+export interface Profile {
+  id: string
+  plan_type: 'free' | 'pro'
+  created_at: string
+}
+
 export interface Application {
   id: string
   user_id: string

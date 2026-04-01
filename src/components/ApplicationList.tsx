@@ -23,17 +23,31 @@ function formatSalary(salary: number | null | undefined, period: string | null |
   return `₺${fmt}${period === 'monthly' ? '/ay' : '/yıl'}`
 }
 
-export default function ApplicationList({ initialApplications }: { initialApplications: Application[] }) {
+export default function ApplicationList({
+  initialApplications,
+  planType = 'free',
+}: {
+  initialApplications: Application[]
+  planType?: 'free' | 'pro'
+}) {
+  const FREE_LIMIT = 20
   const [applications, setApplications] = useState(initialApplications)
   const [modalOpen, setModalOpen]       = useState(false)
   const [editingApp, setEditingApp]     = useState<Application | undefined>()
   const [view, setView]                 = useState<'list' | 'kanban'>('list')
+  const [upgradeOpen, setUpgradeOpen]   = useState(false)
 
-  function openNew()  { setEditingApp(undefined); setModalOpen(true) }
+  const atLimit = planType === 'free' && applications.length >= FREE_LIMIT
+
+  function openNew() {
+    if (atLimit) { setUpgradeOpen(true); return }
+    setEditingApp(undefined); setModalOpen(true)
+  }
   function openEdit(app: Application) { setEditingApp(app); setModalOpen(true) }
   function handleClose() { setModalOpen(false); setEditingApp(undefined) }
 
-  function handleCreated(app: Application)  { setApplications(prev => [app, ...prev]) }
+  function handleCreated(app: Application) { setApplications(prev => [app, ...prev]) }
+  function handleLimitError() { setModalOpen(false); setUpgradeOpen(true) }
   function handleUpdated(updated: Application) { setApplications(prev => prev.map(a => a.id === updated.id ? updated : a)) }
   function handleDeleted(id: string)  { setApplications(prev => prev.filter(a => a.id !== id)) }
   function handleStatusChange(id: string, newStatus: ApplicationStatus) {
@@ -49,19 +63,23 @@ export default function ApplicationList({ initialApplications }: { initialApplic
   }
 
   const modal = (
-    <ApplicationModal
-      open={modalOpen}
-      onClose={handleClose}
-      onCreated={handleCreated}
-      onUpdated={handleUpdated}
-      editingApp={editingApp}
-    />
+    <>
+      <ApplicationModal
+        open={modalOpen}
+        onClose={handleClose}
+        onCreated={handleCreated}
+        onUpdated={handleUpdated}
+        onLimitError={handleLimitError}
+        editingApp={editingApp}
+      />
+      <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+    </>
   )
 
   if (view === 'kanban') {
     return (
       <div className="flex flex-col gap-6">
-        <Header count={applications.length} view={view} onViewChange={setView} onAdd={openNew} />
+        <Header count={applications.length} view={view} onViewChange={setView} onAdd={openNew} planType={planType} freeLimit={FREE_LIMIT} />
         <KanbanBoard
           applications={applications}
           onStatusChange={(id, newStatus) => handleStatusChange(id, newStatus)}
@@ -78,7 +96,7 @@ export default function ApplicationList({ initialApplications }: { initialApplic
   return (
     <>
       <div className="flex flex-col gap-6">
-        <Header count={applications.length} view={view} onViewChange={setView} onAdd={openNew} />
+        <Header count={applications.length} view={view} onViewChange={setView} onAdd={openNew} planType={planType} freeLimit={FREE_LIMIT} />
 
         {applications.length > 0 && (
           <div className="flex gap-2 flex-wrap">
@@ -115,22 +133,41 @@ export default function ApplicationList({ initialApplications }: { initialApplic
 // ── Header ────────────────────────────────────────────────────────────────────
 
 function Header({
-  count, view, onViewChange, onAdd,
+  count, view, onViewChange, onAdd, planType, freeLimit,
 }: {
   count: number
   view: 'list' | 'kanban'
   onViewChange: (v: 'list' | 'kanban') => void
   onAdd: () => void
+  planType: 'free' | 'pro'
+  freeLimit: number
 }) {
+  const pct   = Math.min(count / freeLimit, 1)
+  const atLim = planType === 'free' && count >= freeLimit
+
   return (
     <div className="flex items-start justify-between">
       <div>
         <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Başvurularım
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {count === 0 ? 'Henüz başvuru yok' : `${count} başvuru`}
-        </p>
+        {planType === 'free' ? (
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-28 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-strong)' }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${pct * 100}%`, background: atLim ? '#ef4444' : 'var(--teal)' }}
+              />
+            </div>
+            <span className="text-xs" style={{ color: atLim ? '#ef4444' : 'var(--text-muted)' }}>
+              {count}/{freeLimit} başvuru
+            </span>
+          </div>
+        ) : (
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {count === 0 ? 'Henüz başvuru yok' : `${count} başvuru`}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-2">
         {/* View toggle */}
@@ -600,6 +637,77 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       >
         Başvuru Ekle
       </button>
+    </div>
+  )
+}
+
+// ── Upgrade modal ─────────────────────────────────────────────────────────────
+
+function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm rounded-2xl p-8 flex flex-col items-center text-center gap-4 shadow-2xl"
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+          style={{ color: 'var(--text-muted)', background: 'transparent' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-raised)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+        </button>
+
+        {/* Icon */}
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)' }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{ color: '#fbbf24' }}>
+            <path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"
+              stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+        </div>
+
+        <div>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Ücretsiz Plan Limitine Ulaştın
+          </h2>
+          <p className="text-sm mt-2 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Ücretsiz planda en fazla <strong style={{ color: 'var(--text-secondary)' }}>20 başvuru</strong> ekleyebilirsin.
+            Sınırsız takip için Pro plana geç.
+          </p>
+        </div>
+
+        <div className="w-full flex flex-col gap-2 mt-1">
+          <button
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #14b8a6, #0ea5e9)' }}
+          >
+            Pro&apos;ya Geç — Sınırsız Başvuru
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full py-2 rounded-xl text-sm transition-colors"
+            style={{ color: 'var(--text-muted)', background: 'transparent' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)' }}
+          >
+            Şimdilik kalsın
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
