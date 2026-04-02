@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useDroppable, useDraggable } from '@dnd-kit/core'
 import type { Application, ApplicationStatus } from '@/lib/types'
 
@@ -66,6 +66,8 @@ export function KanbanCard({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const cfg = STATUS_CONFIG[app.status]
+  // Track pointer start position to distinguish click from drag
+  const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
   const deadline  = app.status === 'wishlist' ? deadlineBadge(app.deadline) : null
   const interview = interviewBadge(app.interview_date)
@@ -99,6 +101,13 @@ export function KanbanCard({
       }}
       onMouseEnter={e => { if (!isDragging && !isOverlay) e.currentTarget.style.boxShadow = '0 4px 12px rgba(11,34,64,0.09), 0 1px 3px rgba(11,34,64,0.05)' }}
       onMouseLeave={e => { if (!isOverlay) e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)' }}
+      onPointerDown={e => { pointerStart.current = { x: e.clientX, y: e.clientY } }}
+      onClick={e => {
+        if (isOverlay || !onEdit || !pointerStart.current) return
+        const dx = Math.abs(e.clientX - pointerStart.current.x)
+        const dy = Math.abs(e.clientY - pointerStart.current.y)
+        if (dx < 5 && dy < 5) onEdit()
+      }}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
     >
       {/* Top row: avatar + text + actions */}
@@ -111,10 +120,10 @@ export function KanbanCard({
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
+          <p className="text-xs font-semibold leading-tight truncate" style={{ color: 'var(--text-primary)' }} title={app.company}>
             {app.company}
           </p>
-          <p className="text-xs leading-tight mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+          <p className="text-xs leading-tight mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }} title={app.position}>
             {app.position}
           </p>
         </div>
@@ -123,6 +132,7 @@ export function KanbanCard({
           <div
             className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
             onPointerDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             {!confirmDelete ? (
               <>
@@ -306,16 +316,21 @@ export function KanbanColumn({
 
         {applications.length === 0 && (
           <div
-            className="flex flex-col items-center justify-center gap-1.5 py-8 rounded-xl transition-colors duration-150"
+            className="flex flex-col items-center justify-center gap-2 py-10 rounded-xl transition-colors duration-150"
             style={{
               border: `1.5px dashed ${isOver ? cfg.accent : 'var(--border)'}`,
               background: isOver ? cfg.bg : 'transparent',
             }}
           >
-            <span className="text-lg font-light select-none" style={{ color: isOver ? cfg.accent : 'var(--border)', lineHeight: 1 }}>
+            <span
+              className="text-xl select-none"
+              style={{ color: isOver ? cfg.accent : 'var(--border)', lineHeight: 1 }}
+            >
               {cfg.emptyIcon}
             </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Buraya sürükle</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '10px', textAlign: 'center', lineHeight: 1.5 }}>
+              {isOver ? 'Buraya bırak' : 'Henüz başvuru yok'}
+            </span>
           </div>
         )}
       </div>

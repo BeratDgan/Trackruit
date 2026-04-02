@@ -181,6 +181,40 @@ export default function AnalyticsDashboard({ applications }: { applications: App
     </div>
   )
 
+  // Zero state — rendered after all hooks
+  if (total === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center"
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-muted)' }}>
+            <rect x="3" y="3" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+            <rect x="3" y="10" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+            <rect x="3" y="17" width="18" height="4" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+          </svg>
+        </div>
+        <div>
+          <p className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Henüz veri yok</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            İlk başvurunu ekle ve istatistiklerin burada görünsün
+          </p>
+        </div>
+        <a
+          href="/dashboard"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style={{ background: 'var(--teal)' }}
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1v12M1 7h12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          İlk Başvurunu Ekle
+        </a>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}

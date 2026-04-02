@@ -23,11 +23,11 @@ export default function GoogleSignInButton() {
       }}
       onMouseEnter={e => {
         (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--teal)'
-        ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--teal-glow)'
+          ; (e.currentTarget as HTMLButtonElement).style.background = 'var(--teal-glow)'
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-strong)'
-        ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-raised)'
+          ; (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-raised)'
       }}
     >
       <GoogleIcon />

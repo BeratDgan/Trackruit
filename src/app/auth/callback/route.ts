@@ -15,11 +15,28 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createClient()
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
     return NextResponse.redirect(`${origin}/login?error=auth`)
   }
 
-  return NextResponse.redirect(`${origin}/dashboard`)
+  // If incremental auth passed a return URL via the OAuth state param, use it
+  const next = searchParams.get('next')
+  const redirectTo = next && next.startsWith('/') ? `${origin}${next}` : `${origin}/dashboard`
+  const response = NextResponse.redirect(redirectTo)
+
+  // Store Google access token so the calendar API route can use it server-side
+  const providerToken = data.session?.provider_token
+  if (providerToken) {
+    response.cookies.set('g_token', providerToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 3500,
+      path: '/',
+    })
+  }
+
+  return response
 }

@@ -118,6 +118,12 @@ interface Props {
   editingApp?: Application
 }
 
+interface FieldErrors {
+  company?: string
+  position?: string
+  url?: string
+}
+
 export default function ApplicationModal({ open, onClose, onCreated, onUpdated, onLimitError, editingApp }: Props) {
   const isEdit = !!editingApp
 
@@ -134,7 +140,14 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
   const [interviewDate, setInterviewDate] = useState('')
   const [loading, setLoading]             = useState(false)
   const [error, setError]                 = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors]     = useState<FieldErrors>({})
+  const [lastAdded, setLastAdded]         = useState<string | null>(null)
   const firstInput = useRef<HTMLInputElement>(null)
+
+  // Derive date warnings (non-blocking)
+  const todayStr = today()
+  const deadlineWarn    = deadline && deadline < todayStr
+  const interviewWarn   = interviewDate && interviewDate <= todayStr
 
   useEffect(() => {
     if (open) {
@@ -156,6 +169,8 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
         setDeadline(''); setAppliedDate(today()); setInterviewDate('')
       }
       setError(null)
+      setFieldErrors({})
+      setLastAdded(null)
       setTimeout(() => firstInput.current?.focus(), 50)
     }
   }, [open, editingApp])
@@ -175,11 +190,28 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
     }
   }
 
+  function resetForm() {
+    setCompany(''); setPosition(''); setStatus('applied'); setUrl(''); setNotes('')
+    setSalary(''); setSalaryPeriod('monthly'); setLocation('')
+    setDeadline(''); setAppliedDate(today()); setInterviewDate('')
+    setFieldErrors({})
+    setError(null)
+    setTimeout(() => firstInput.current?.focus(), 50)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!company.trim() || !position.trim()) return
+
+    // Field-level validation
+    const errs: FieldErrors = {}
+    if (!company.trim()) errs.company = 'Şirket adı zorunludur'
+    if (!position.trim()) errs.position = 'Pozisyon zorunludur'
+    if (url.trim() && !url.trim().startsWith('http')) errs.url = 'URL "http" ile başlamalıdır'
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return }
+
     setLoading(true)
     setError(null)
+    setFieldErrors({})
 
     const body = {
       company: company.trim(),
@@ -204,6 +236,7 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
         })
         if (!res.ok) throw new Error('Başvuru güncellenemedi')
         onUpdated(await res.json())
+        onClose()
       } else {
         const res = await fetch('/api/applications', {
           method: 'POST',
@@ -216,8 +249,10 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
           throw new Error('Başvuru eklenemedi')
         }
         onCreated(data)
+        // Stay open for rapid entry — show flash and reset
+        setLastAdded(company.trim())
+        resetForm()
       }
-      onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu')
     } finally {
@@ -274,24 +309,40 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
           {/* — Pozisyon ——————————————————————————— */}
           <SectionLabel>Pozisyon</SectionLabel>
 
+          {/* Add-another success flash */}
+          {lastAdded && (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
+              style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#22c55e' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M3.5 6l2 2 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span style={{ color: 'var(--text-primary)' }}>
+                <strong>{lastAdded}</strong> eklendi — bir tane daha ekleyebilirsin
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Şirket *">
+            <Field label="Şirket *" error={fieldErrors.company}>
               <input
                 ref={firstInput}
                 value={company}
-                onChange={e => setCompany(e.target.value)}
+                onChange={e => { setCompany(e.target.value); if (fieldErrors.company) setFieldErrors(p => ({ ...p, company: undefined })) }}
                 placeholder="Google, Meta…"
-                required
                 className="input-base"
+                style={fieldErrors.company ? { borderColor: '#ef4444' } : {}}
               />
             </Field>
-            <Field label="Pozisyon *">
+            <Field label="Pozisyon *" error={fieldErrors.position}>
               <input
                 value={position}
-                onChange={e => setPosition(e.target.value)}
+                onChange={e => { setPosition(e.target.value); if (fieldErrors.position) setFieldErrors(p => ({ ...p, position: undefined })) }}
                 placeholder="Software Engineer"
-                required
                 className="input-base"
+                style={fieldErrors.position ? { borderColor: '#ef4444' } : {}}
               />
             </Field>
           </div>
@@ -352,13 +403,14 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
                 className="input-base"
               />
             </Field>
-            <Field label="İlan Linki">
+            <Field label="İlan Linki" error={fieldErrors.url}>
               <input
-                type="url"
+                type="text"
                 value={url}
-                onChange={e => setUrl(e.target.value)}
+                onChange={e => { setUrl(e.target.value); if (fieldErrors.url) setFieldErrors(p => ({ ...p, url: undefined })) }}
                 placeholder="https://…"
                 className="input-base"
+                style={fieldErrors.url ? { borderColor: '#ef4444' } : {}}
               />
             </Field>
           </div>
@@ -370,15 +422,37 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
             <Field label="Başvuru Tarihi">
               <DateInput value={appliedDate} onChange={setAppliedDate} placeholder="Tarih seç" />
             </Field>
-            <Field label="Son Başvuru Tarihi">
-              <DateInput value={deadline} onChange={setDeadline} placeholder="Tarih seç" />
-            </Field>
+            <div className="flex flex-col gap-1.5">
+              <Field label="Son Başvuru Tarihi">
+                <DateInput value={deadline} onChange={setDeadline} placeholder="Tarih seç" />
+              </Field>
+              {deadlineWarn && (
+                <p className="text-xs flex items-center gap-1" style={{ color: 'var(--status-interview-text)' }}>
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M6 3.5v3M6 8v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  Son başvuru tarihi geçmiş
+                </p>
+              )}
+            </div>
           </div>
 
           {status === 'interview' && (
-            <Field label="Mülakat Tarihi">
-              <DateInput value={interviewDate} onChange={setInterviewDate} placeholder="Tarih seç" />
-            </Field>
+            <div className="flex flex-col gap-1.5">
+              <Field label="Mülakat Tarihi">
+                <DateInput value={interviewDate} onChange={setInterviewDate} placeholder="Tarih seç" />
+              </Field>
+              {interviewWarn && (
+                <p className="text-xs flex items-center gap-1" style={{ color: 'var(--status-interview-text)' }}>
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M6 3.5v3M6 8v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                  Mülakat tarihi bugün veya geçmişte
+                </p>
+              )}
+            </div>
           )}
 
           {/* — Notlar ———————————————————————————— */}
@@ -410,7 +484,7 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-raised)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
-              İptal
+              {isEdit ? 'İptal' : 'Kapat'}
             </button>
             <button
               type="submit"
@@ -429,11 +503,14 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</label>
       {children}
+      {error && (
+        <p className="text-xs" style={{ color: '#ef4444' }}>{error}</p>
+      )}
     </div>
   )
 }
