@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Application, ApplicationStatus } from '@/lib/types'
 import ApplicationModal from './NewApplicationModal'
 import KanbanBoard from './kanban/KanbanBoard'
+import { useToast } from './Toast'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; dot: string; bg: string; text: string }> = {
   wishlist:  { label: 'İstek Listesi', dot: '#94A3B8', bg: 'var(--status-wishlist-bg)',   text: 'var(--status-wishlist-text)' },
@@ -31,6 +32,7 @@ export default function ApplicationList({
   planType?: 'free' | 'pro'
 }) {
   const FREE_LIMIT = 20
+  const { toast } = useToast()
   const [applications, setApplications] = useState(initialApplications)
   const [modalOpen, setModalOpen]       = useState(false)
   const [editingApp, setEditingApp]     = useState<Application | undefined>()
@@ -46,10 +48,17 @@ export default function ApplicationList({
   function openEdit(app: Application) { setEditingApp(app); setModalOpen(true) }
   function handleClose() { setModalOpen(false); setEditingApp(undefined) }
 
-  function handleCreated(app: Application) { setApplications(prev => [app, ...prev]) }
+  function handleCreated(app: Application) {
+    setApplications(prev => [app, ...prev])
+    toast(`${app.company} eklendi`)
+  }
   function handleLimitError() { setModalOpen(false); setUpgradeOpen(true) }
   function handleUpdated(updated: Application) { setApplications(prev => prev.map(a => a.id === updated.id ? updated : a)) }
-  function handleDeleted(id: string)  { setApplications(prev => prev.filter(a => a.id !== id)) }
+  function handleDeleted(id: string) {
+    const app = applications.find(a => a.id === id)
+    setApplications(prev => prev.filter(a => a.id !== id))
+    if (app) toast(`${app.company} silindi`, 'error')
+  }
   function handleStatusChange(id: string, newStatus: ApplicationStatus) {
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a))
   }
@@ -232,6 +241,7 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
   onEdit: () => void
   onDeleted: () => void
 }) {
+  const { toast } = useToast()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting]           = useState(false)
   const [clState, setClState]             = useState<CLState>('idle')
@@ -299,6 +309,7 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
       // Persist to localStorage so the button stays "Eklendi ✓" across re-renders
       try { localStorage.setItem(lsKey(type), data.eventId ?? '1') } catch { /* ignore */ }
       setState('success')
+      toast(type === 'interview' ? 'Mülakat takvime eklendi' : 'Deadline takvime eklendi')
       setTimeout(() => setState('added'), 2000)
     } catch {
       setState('error')
@@ -341,6 +352,7 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
   function handleCopy() {
     navigator.clipboard.writeText(coverLetter).then(() => {
       setCopied(true)
+      toast('Ön yazı kopyalandı')
       setTimeout(() => setCopied(false), 2000)
     })
   }
@@ -366,10 +378,10 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
 
         {/* Company + position + location */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+          <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }} title={app.company}>
             {app.company}
           </p>
-          <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+          <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-secondary)' }} title={app.position}>
             {app.position}
           </p>
           {app.location && (

@@ -13,10 +13,53 @@ import {
   closestCenter,
 } from '@dnd-kit/core'
 import type { Application, ApplicationStatus } from '@/lib/types'
-import { KanbanColumn, KanbanCard } from './KanbanColumn'
+import { KanbanColumn, KanbanCard, STATUS_CONFIG } from './KanbanColumn'
 import ImportModal from '@/components/ImportModal'
+import { useToast } from '@/components/Toast'
 
 const COLUMNS: ApplicationStatus[] = ['wishlist', 'applied', 'interview', 'offered', 'rejected']
+
+// ── Skeleton components ────────────────────────────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div
+      className="rounded-xl p-3.5 animate-pulse"
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '3px solid var(--border)' }}
+    >
+      <div className="flex items-start gap-2.5">
+        <div className="h-7 w-7 rounded-lg flex-shrink-0" style={{ background: 'var(--border)' }} />
+        <div className="flex-1 flex flex-col gap-2">
+          <div className="h-2.5 w-3/4 rounded" style={{ background: 'var(--border)' }} />
+          <div className="h-2 w-1/2 rounded" style={{ background: 'var(--border)' }} />
+        </div>
+      </div>
+      <div className="mt-3 h-2 w-1/3 rounded" style={{ background: 'var(--border)' }} />
+    </div>
+  )
+}
+
+function SkeletonColumn({ accent }: { accent: string }) {
+  return (
+    <div
+      className="flex flex-col flex-shrink-0 rounded-2xl overflow-hidden"
+      style={{ width: 256, border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+    >
+      <div style={{ height: 3, background: accent, opacity: 0.3 }} />
+      <div className="flex items-center justify-between px-3.5 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="h-3 w-20 rounded animate-pulse" style={{ background: 'var(--border)' }} />
+        <div className="h-5 w-6 rounded-full animate-pulse" style={{ background: 'var(--border)' }} />
+      </div>
+      <div className="flex flex-col gap-2 p-2.5">
+        <SkeletonCard />
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    </div>
+  )
+}
+
+// ── Board ──────────────────────────────────────────────────────────────────────
 
 export default function KanbanBoard({
   applications,
@@ -25,6 +68,7 @@ export default function KanbanBoard({
   onDeleted,
   onAdd,
   onImported,
+  loading = false,
 }: {
   applications: Application[]
   onStatusChange: (id: string, newStatus: ApplicationStatus, prevStatus: ApplicationStatus) => void
@@ -32,7 +76,9 @@ export default function KanbanBoard({
   onDeleted: (id: string) => void
   onAdd?: () => void
   onImported?: (apps: Application[]) => void
+  loading?: boolean
 }) {
+  const { toast } = useToast()
   const [activeApp, setActiveApp]           = useState<Application | null>(null)
   const [errorMsg, setErrorMsg]             = useState<string | null>(null)
   const [query, setQuery]                   = useState('')
@@ -92,6 +138,8 @@ export default function KanbanBoard({
         body: JSON.stringify({ status: newStatus }),
       })
       if (!res.ok) throw new Error()
+      const cfg = STATUS_CONFIG[newStatus]
+      toast(`${app.company} → ${cfg.label}`)
     } catch {
       onStatusChange(app.id, app.status, newStatus)
       setErrorMsg('Durum güncellenemedi. Lütfen tekrar dene.')
@@ -99,6 +147,17 @@ export default function KanbanBoard({
   }
 
   const byStatus = (s: ApplicationStatus) => filtered.filter(a => a.status === s)
+
+  // ── Skeleton ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="flex gap-3 overflow-x-auto pb-6" style={{ minHeight: 'calc(100vh - 260px)' }}>
+        {COLUMNS.map(status => (
+          <SkeletonColumn key={status} accent={STATUS_CONFIG[status].accent} />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <DndContext
@@ -220,19 +279,42 @@ export default function KanbanBoard({
         onImported={apps => { onImported?.(apps); setImportOpen(false) }}
       />
 
-      {/* ── Columns ───────────────────────────────────────────────────────── */}
-      <div className="flex gap-3 overflow-x-auto pb-6" style={{ minHeight: 'calc(100vh - 260px)' }}>
-        {COLUMNS.map(status => (
-          <KanbanColumn
-            key={status}
-            status={status}
-            applications={byStatus(status)}
-            onEdit={onEdit}
-            onDeleted={onDeleted}
-            onAdd={onAdd}
-          />
-        ))}
-      </div>
+      {/* ── Filter zero state ────────────────────────────────────────────── */}
+      {isFiltering && filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color: 'var(--border-strong)' }}>
+            <circle cx="14" cy="14" r="9" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M21 21l7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M10 14h8M14 10v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+            Arama kriterlerine uygun başvuru bulunamadı
+          </p>
+          <button
+            onClick={() => { setQuery(''); setLocationFilter('all') }}
+            className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+            style={{ color: 'var(--teal)', border: '1px solid var(--teal)', background: 'transparent' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--teal-glow)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          >
+            Filtreyi Temizle
+          </button>
+        </div>
+      ) : (
+        /* ── Columns ──────────────────────────────────────────────────────── */
+        <div className="flex gap-3 overflow-x-auto pb-6" style={{ minHeight: 'calc(100vh - 260px)' }}>
+          {COLUMNS.map(status => (
+            <KanbanColumn
+              key={status}
+              status={status}
+              applications={byStatus(status)}
+              onEdit={onEdit}
+              onDeleted={onDeleted}
+              onAdd={onAdd}
+            />
+          ))}
+        </div>
+      )}
 
       <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.18,0.67,0.6,1.22)' }}>
         {activeApp && <KanbanCard application={activeApp} isOverlay />}
