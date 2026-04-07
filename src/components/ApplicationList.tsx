@@ -344,7 +344,9 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
       setCoverLetter(data.coverLetter)
       setClState('result')
     } catch (err) {
-      setClError(err instanceof Error ? err.message : 'Bir hata oluştu')
+      const msg = err instanceof Error ? err.message : 'Ön yazı oluşturulamadı'
+      setClError(msg)
+      toast(msg, 'error')
       setClState('idle')
     }
   }

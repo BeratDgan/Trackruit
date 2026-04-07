@@ -191,16 +191,15 @@ export default function AnalyticsDashboard({ applications: initialApplications }
     return Math.round(converted.reduce((a, b) => a + b, 0) / converted.length)
   }, [salaryApps, salaryPeriod])
 
-  // Weekly time series (last 12 weeks)
+  // Weekly time series (last 12 weeks) — only uses applied_date
   const weeklyData = useMemo(() => {
     const weeks: Record<string, number> = {}
     for (const a of applications) {
-      const dateStr = a.applied_date ?? a.created_at
+      const dateStr = a.applied_date   // strict: only applied_date, not created_at fallback
       if (!dateStr) continue
       const label = isoWeekLabel(dateStr)
       if (label) weeks[label] = (weeks[label] ?? 0) + 1
     }
-    // Keep last 12 weeks sorted
     const sorted = Object.entries(weeks)
       .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
       .slice(-12)
@@ -402,9 +401,13 @@ export default function AnalyticsDashboard({ applications: initialApplications }
         >
           {sectionLabel('Haftalık Başvuru')}
           {weeklyData.length === 0 ? (
-            <div className="flex items-center justify-center h-[220px]">
+            <div className="flex flex-col items-center justify-center gap-2 h-[220px]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--border-strong)' }}>
+                <rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
               <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Henüz başvuru tarihi verisi yok
+                Başvuru tarihi girilmemiş — Başvuru Tarihi alanını doldur
               </span>
             </div>
           ) : (
