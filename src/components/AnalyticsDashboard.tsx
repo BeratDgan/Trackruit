@@ -6,6 +6,7 @@ import {
   AreaChart, Area, CartesianGrid,
 } from 'recharts'
 import type { Application, ApplicationStatus } from '@/lib/types'
+import ApplicationModal from './NewApplicationModal'
 
 // ── Colour tokens (must be hardcoded for Recharts SVG attributes) ──────────
 const STATUS_COLORS: Record<ApplicationStatus, string> = {
@@ -50,12 +51,13 @@ function daysFromNow(dateStr: string): number {
 
 // ── Stat card ──────────────────────────────────────────────────────────────
 function StatCard({
-  label, value, sub, accent,
+  label, value, sub, accent, change,
 }: {
   label: string
   value: string | number
   sub?: string
   accent?: string
+  change?: number | null
 }) {
   return (
     <div
@@ -69,9 +71,51 @@ function StatCard({
       >
         {value}
       </span>
-      {sub && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</span>}
+      <div className="flex items-center gap-2">
+        {sub && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</span>}
+        {change != null && change !== 0 && (
+          <span
+            className="text-xs font-medium"
+            style={{ color: change > 0 ? '#10b981' : '#ef4444' }}
+          >
+            {change > 0 ? `+${change}%` : `${change}%`} geçen ay
+          </span>
+        )}
+      </div>
     </div>
   )
+}
+
+// ── CSV export ──────────────────────────────────────────────────────────────
+function exportCSV(applications: Application[]) {
+  const STATUS_LABELS_CSV: Record<ApplicationStatus, string> = {
+    wishlist: 'İstek Listesi', applied: 'Başvuruldu', interview: 'Mülakat',
+    offered: 'Teklif Alındı', rejected: 'Reddedildi',
+  }
+  const headers = ['Şirket', 'Pozisyon', 'Durum', 'Başvuru Tarihi', 'Son Başvuru', 'Mülakat Tarihi', 'Konum', 'Maaş', 'Periyot', 'URL', 'Notlar']
+  const rows = applications.map(a => [
+    a.company,
+    a.position,
+    STATUS_LABELS_CSV[a.status],
+    a.applied_date ?? '',
+    a.deadline ?? '',
+    a.interview_date ?? '',
+    a.location ?? '',
+    a.salary != null ? String(a.salary) : '',
+    a.salary_period ?? '',
+    a.url ?? '',
+    a.notes ?? '',
+  ])
+  const csv = [headers, ...rows]
+    .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `trackruit-${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // ── Custom tooltip ─────────────────────────────────────────────────────────
@@ -96,8 +140,18 @@ function ChartTooltip({ active, payload, label }: {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function AnalyticsDashboard({ applications }: { applications: Application[] }) {
+export default function AnalyticsDashboard({ applications: initialApplications }: { applications: Application[] }) {
   const [salaryPeriod, setSalaryPeriod] = useState<'monthly' | 'yearly'>('monthly')
+  const [editingApp, setEditingApp]     = useState<Application | undefined>()
+  const [modalOpen, setModalOpen]       = useState(false)
+  const [applications, setApplications] = useState(initialApplications)
+
+  function openEdit(app: Application) { setEditingApp(app); setModalOpen(true) }
+  function handleClose() { setModalOpen(false); setEditingApp(undefined) }
+  function handleUpdated(updated: Application) {
+    setApplications(prev => prev.map(a => a.id === updated.id ? updated : a))
+    handleClose()
+  }
 
   const total = applications.length
 
@@ -151,6 +205,23 @@ export default function AnalyticsDashboard({ applications }: { applications: App
       .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
       .slice(-12)
     return sorted.map(([week, count]) => ({ week, count }))
+  }, [applications])
+
+  // Month-over-month change for total applications
+  const monthChange = useMemo(() => {
+    const now = new Date()
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const thisMonthCount = applications.filter(a => {
+      const d = new Date(a.applied_date ?? a.created_at)
+      return d >= startOfThisMonth
+    }).length
+    const lastMonthCount = applications.filter(a => {
+      const d = new Date(a.applied_date ?? a.created_at)
+      return d >= startOfLastMonth && d < startOfThisMonth
+    }).length
+    if (lastMonthCount === 0) return null
+    return Math.round(((thisMonthCount - lastMonthCount) / lastMonthCount) * 100)
   }, [applications])
 
   // Upcoming events (next 7 days)
@@ -218,17 +289,31 @@ export default function AnalyticsDashboard({ applications }: { applications: App
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Analitik</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          {total} başvurunun genel görünümü
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Analitik</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            {total} başvurunun genel görünümü
+          </p>
+        </div>
+        <button
+          onClick={() => exportCSV(applications)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+          style={{ border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-raised)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+        >
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1v8M4 6l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          CSV İndir
+        </button>
       </div>
 
       {/* Stat cards */}
       {sectionLabel('Özet')}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Toplam Başvuru" value={total} sub="tüm zamanlar" />
+        <StatCard label="Toplam Başvuru" value={total} sub="tüm zamanlar" change={monthChange} />
         <StatCard
           label="Mülakat Oranı"
           value={`${interviewRate}%`}
@@ -362,6 +447,15 @@ export default function AnalyticsDashboard({ applications }: { applications: App
         </div>
       </div>
 
+      {/* Edit modal */}
+      <ApplicationModal
+        open={modalOpen}
+        onClose={handleClose}
+        onCreated={() => {}}
+        onUpdated={handleUpdated}
+        editingApp={editingApp}
+      />
+
       {/* Upcoming events */}
       <div>
         {sectionLabel('Yaklaşan Etkinlikler (7 gün)')}
@@ -391,8 +485,10 @@ export default function AnalyticsDashboard({ applications }: { applications: App
               return (
                 <div
                   key={i}
-                  className="flex items-center gap-4 rounded-xl px-4 py-3"
+                  className="flex items-center gap-4 rounded-xl px-4 py-3 cursor-pointer transition-opacity hover:opacity-80"
                   style={{ background: bgColor, border: `1px solid ${color}22` }}
+                  onClick={() => openEdit(ev.app)}
+                  title="Başvuruyu düzenle"
                 >
                   {/* Icon */}
                   <div

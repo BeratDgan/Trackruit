@@ -306,8 +306,8 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 overflow-y-auto">
 
-          {/* — Pozisyon ——————————————————————————— */}
-          <SectionLabel>Pozisyon</SectionLabel>
+          {/* — Temel Bilgiler ——————————————————————— */}
+          <SectionLabel>Temel Bilgiler</SectionLabel>
 
           {/* Add-another success flash */}
           {lastAdded && (
@@ -347,61 +347,17 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
             </Field>
           </div>
 
-          <Field label="Durum">
-            <select
-              value={status}
-              onChange={e => handleStatusChange(e.target.value as ApplicationStatus)}
-              className="input-base"
-            >
-              {STATUS_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </Field>
-
-          {/* — Detaylar ——————————————————————————— */}
-          <SectionLabel>Detaylar</SectionLabel>
-
-          {/* Salary */}
-          <Field label="Maaş">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  ₺
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={salary}
-                  onChange={e => setSalary(e.target.value)}
-                  placeholder="85 000"
-                  className="input-base"
-                  style={{ paddingLeft: '1.75rem' }}
-                />
-              </div>
-              <select
-                value={salaryPeriod}
-                onChange={e => setSalaryPeriod(e.target.value as 'monthly' | 'yearly')}
-                className="input-base"
-                style={{ width: 110, flexShrink: 0 }}
-              >
-                <option value="monthly">/ Aylık</option>
-                <option value="yearly">/ Yıllık</option>
-              </select>
-            </div>
-          </Field>
-
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Konum">
-              <input
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                placeholder="İstanbul, Remote…"
+            <Field label="Durum">
+              <select
+                value={status}
+                onChange={e => handleStatusChange(e.target.value as ApplicationStatus)}
                 className="input-base"
-              />
+              >
+                {STATUS_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </Field>
             <Field label="İlan Linki" error={fieldErrors.url}>
               <input
@@ -455,16 +411,58 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
             </div>
           )}
 
-          {/* — Notlar ———————————————————————————— */}
-          <SectionLabel>Notlar</SectionLabel>
+          {/* — Detaylar ——————————————————————————— */}
+          <SectionLabel>Detaylar</SectionLabel>
 
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Recruiter adı, süreç notları, hatırlatmalar…"
-            rows={3}
-            className="input-base resize-none"
-          />
+          <Field label="Maaş">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  ₺
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={salary}
+                  onChange={e => setSalary(e.target.value)}
+                  placeholder="85 000"
+                  className="input-base"
+                  style={{ paddingLeft: '1.75rem' }}
+                />
+              </div>
+              <select
+                value={salaryPeriod}
+                onChange={e => setSalaryPeriod(e.target.value as 'monthly' | 'yearly')}
+                className="input-base"
+                style={{ width: 110, flexShrink: 0 }}
+              >
+                <option value="monthly">/ Aylık</option>
+                <option value="yearly">/ Yıllık</option>
+              </select>
+            </div>
+          </Field>
+
+          <Field label="Konum">
+            <input
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="İstanbul, Remote…"
+              className="input-base"
+            />
+          </Field>
+
+          <Field label="Notlar">
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Recruiter adı, süreç notları, hatırlatmalar…"
+              rows={3}
+              className="input-base resize-none"
+            />
+          </Field>
 
           {error && (
             <p

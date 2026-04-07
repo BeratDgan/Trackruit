@@ -27,6 +27,12 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
 }
 
+function formatSalary(salary: number | null | undefined, period: string | null | undefined) {
+  if (!salary) return null
+  const fmt = salary >= 1000 ? `${(salary / 1000).toFixed(salary % 1000 === 0 ? 0 : 1)}K` : String(salary)
+  return `₺${fmt}${period === 'monthly' ? '/ay' : '/yıl'}`
+}
+
 function initials(name: string) {
   return name.trim().slice(0, 2).toUpperCase()
 }
@@ -71,7 +77,8 @@ export function KanbanCard({
 
   const deadline  = app.status === 'wishlist' ? deadlineBadge(app.deadline) : null
   const interview = interviewBadge(app.interview_date)
-  const hasBadges = !isOverlay && (!!deadline || !!interview)
+  const salary    = formatSalary(app.salary, app.salary_period)
+  const hasBadges = !isOverlay && (!!deadline || !!interview || !!app.location)
 
   async function handleDelete() {
     setDeleting(true)
@@ -187,6 +194,18 @@ export function KanbanCard({
       {/* Badges row */}
       {hasBadges && (
         <div className="flex flex-wrap gap-1.5">
+          {app.location && !isOverlay && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium"
+              style={{ background: 'var(--bg-raised)', color: 'var(--text-muted)', fontSize: '10px' }}
+            >
+              <svg width="7" height="7" viewBox="0 0 10 12" fill="none">
+                <path d="M5 1a3.5 3.5 0 013.5 3.5C8.5 7.5 5 11 5 11S1.5 7.5 1.5 4.5A3.5 3.5 0 015 1z" stroke="currentColor" strokeWidth="1.2"/>
+                <circle cx="5" cy="4.5" r="1" fill="currentColor"/>
+              </svg>
+              {app.location}
+            </span>
+          )}
           {deadline && (
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium"
@@ -216,11 +235,16 @@ export function KanbanCard({
         </div>
       )}
 
-      {/* Bottom row: date + link */}
+      {/* Bottom row: date + salary + link */}
       <div className="flex items-center justify-between">
         <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>
           {formatDate(app.created_at)}
         </span>
+        {salary && !isOverlay && (
+          <span style={{ color: 'var(--status-offered-text)', fontSize: '10px', fontWeight: 500 }}>
+            {salary}
+          </span>
+        )}
         {app.url && !isOverlay && (
           <a
             href={app.url}
