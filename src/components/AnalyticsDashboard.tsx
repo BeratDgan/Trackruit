@@ -113,7 +113,7 @@ function exportCSV(applications: Application[]) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `trackruit-${new Date().toISOString().split('T')[0]}.csv`
+  a.download = `trackruit-export-${new Date().toISOString().split('T')[0]}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -171,10 +171,12 @@ export default function AnalyticsDashboard({ applications: initialApplications }
   const interviewCount = (byStatus.find(b => b.status === 'interview')?.count ?? 0) +
                          (byStatus.find(b => b.status === 'offered')?.count ?? 0)
   const offeredCount   = byStatus.find(b => b.status === 'offered')?.count ?? 0
+  const rejectedCount  = byStatus.find(b => b.status === 'rejected')?.count ?? 0
   const appliedTotal   = applications.filter(a => a.status !== 'wishlist').length
 
   const interviewRate = appliedTotal > 0 ? Math.round((interviewCount / appliedTotal) * 100) : 0
   const offerRate     = appliedTotal > 0 ? Math.round((offeredCount   / appliedTotal) * 100) : 0
+  const rejectionRate = appliedTotal > 0 ? Math.round((rejectedCount  / appliedTotal) * 100) : 0
 
   // Average salary
   const salaryApps = useMemo(
@@ -221,6 +223,16 @@ export default function AnalyticsDashboard({ applications: initialApplications }
     }).length
     if (lastMonthCount === 0) return null
     return Math.round(((thisMonthCount - lastMonthCount) / lastMonthCount) * 100)
+  }, [applications])
+
+  // Top 5 companies by application count
+  const topCompanies = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const a of applications) counts[a.company] = (counts[a.company] ?? 0) + 1
+    return Object.entries(counts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([company, count]) => ({ company, count }))
   }, [applications])
 
   // Upcoming events (next 7 days)
@@ -311,7 +323,7 @@ export default function AnalyticsDashboard({ applications: initialApplications }
 
       {/* Stat cards */}
       {sectionLabel('Özet')}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Toplam Başvuru" value={total} sub="tüm zamanlar" change={monthChange} />
         <StatCard
           label="Mülakat Oranı"
@@ -324,6 +336,12 @@ export default function AnalyticsDashboard({ applications: initialApplications }
           value={`${offerRate}%`}
           sub={`${offeredCount} teklif`}
           accent={offeredCount > 0 ? '#10b981' : undefined}
+        />
+        <StatCard
+          label="Red Oranı"
+          value={`${rejectionRate}%`}
+          sub={`${rejectedCount} reddedildi`}
+          accent={rejectionRate > 50 ? '#ef4444' : undefined}
         />
         {/* Avg salary card with toggle */}
         <div
@@ -449,6 +467,51 @@ export default function AnalyticsDashboard({ applications: initialApplications }
           )}
         </div>
       </div>
+
+      {/* Top companies */}
+      {topCompanies.length > 0 && (
+        <div>
+          {sectionLabel('En Çok Başvurulan Şirketler')}
+          <div
+            className="rounded-2xl p-5"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            <div className="flex flex-col gap-3">
+              {topCompanies.map(({ company, count }, i) => {
+                const maxCount = topCompanies[0].count
+                const pct = Math.round((count / maxCount) * 100)
+                return (
+                  <div key={company} className="flex items-center gap-3">
+                    <span
+                      className="text-xs font-semibold w-4 text-right flex-shrink-0"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span
+                      className="text-sm font-medium truncate flex-1 min-w-0"
+                      style={{ color: 'var(--text-primary)' }}
+                    >
+                      {company}
+                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border-strong)' }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${pct}%`, background: TEAL }}
+                        />
+                      </div>
+                      <span className="text-xs font-semibold w-4 text-right" style={{ color: 'var(--text-muted)' }}>
+                        {count}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       <ApplicationModal

@@ -99,12 +99,13 @@ export function KanbanCard({
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderLeft: `3px solid ${cfg.accent}`,
-        opacity: isDragging ? 0.5 : deleting ? 0.4 : 1,
+        position: 'relative',
+        opacity: isDragging ? 0.5 : deleting ? 0 : 1,
         boxShadow: isOverlay
           ? '0 16px 40px rgba(11,34,64,0.16), 0 4px 12px rgba(11,34,64,0.08)'
           : '0 1px 3px rgba(11,34,64,0.04)',
         transform: isOverlay ? 'rotate(2deg) scale(1.02)' : undefined,
-        transition: isDragging ? 'none' : 'box-shadow 0.15s ease',
+        transition: isDragging ? 'none' : 'box-shadow 0.15s ease, opacity 0.25s ease',
       }}
       onMouseEnter={e => { if (!isDragging && !isOverlay) e.currentTarget.style.boxShadow = '0 4px 12px rgba(11,34,64,0.09), 0 1px 3px rgba(11,34,64,0.05)' }}
       onMouseLeave={e => { if (!isOverlay) e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)' }}
@@ -117,6 +118,50 @@ export function KanbanCard({
       }}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
     >
+      {/* Delete confirmation overlay */}
+      {confirmDelete && !isOverlay && (
+        <div
+          className="absolute inset-0 rounded-xl flex flex-col items-center justify-center gap-2.5 p-4"
+          style={{ background: 'var(--bg-card)', zIndex: 2 }}
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
+        >
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'var(--status-rejected-bg)' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--status-rejected-text)' }}>
+              <path d="M1 3.5h12M5 3.5V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1m1.5 0l-.6 8a1 1 0 01-1 .93H5.1a1 1 0 01-1-.93l-.6-8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Bu başvuruyu silmek istediğinizden emin misiniz?
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              Bu işlem geri alınamaz.
+            </p>
+          </div>
+          <div className="flex gap-1.5 w-full">
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+              style={{ border: '1px solid var(--border-strong)', color: 'var(--text-secondary)' }}
+            >
+              İptal
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-60"
+              style={{ background: 'var(--status-rejected-text)' }}
+            >
+              {deleting ? '…' : 'Sil'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top row: avatar + text + actions */}
       <div className="flex items-start gap-2.5">
         <div
@@ -141,52 +186,30 @@ export function KanbanCard({
             onPointerDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
           >
-            {!confirmDelete ? (
-              <>
-                <button
-                  onClick={onEdit}
-                  className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-applied-bg)'; e.currentTarget.style.color = 'var(--status-applied-text)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
-                  title="Düzenle"
-                >
-                  <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
-                    <path d="M9.5 1.5l3 3L4 13H1v-3L9.5 1.5z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
-                  style={{ color: 'var(--text-muted)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-rejected-bg)'; e.currentTarget.style.color = 'var(--status-rejected-text)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
-                  title="Sil"
-                >
-                  <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
-                    <path d="M1 3.5h12M5 3.5V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1m1.5 0l-.6 8a1 1 0 01-1 .93H5.1a1 1 0 01-1-.93l-.6-8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="px-2 py-0.5 rounded text-white font-medium disabled:opacity-50"
-                  style={{ background: 'var(--status-rejected-text)', fontSize: '10px' }}
-                >
-                  {deleting ? '...' : 'Sil'}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="px-2 py-0.5 rounded font-medium"
-                  style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '10px' }}
-                >
-                  İptal
-                </button>
-              </div>
-            )}
+            <button
+              onClick={onEdit}
+              className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-applied-bg)'; e.currentTarget.style.color = 'var(--status-applied-text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              title="Düzenle"
+            >
+              <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                <path d="M9.5 1.5l3 3L4 13H1v-3L9.5 1.5z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-rejected-bg)'; e.currentTarget.style.color = 'var(--status-rejected-text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              title="Sil"
+            >
+              <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                <path d="M1 3.5h12M5 3.5V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5v1m1.5 0l-.6 8a1 1 0 01-1 .93H5.1a1 1 0 01-1-.93l-.6-8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
           </div>
         )}
       </div>
