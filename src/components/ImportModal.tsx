@@ -307,6 +307,10 @@ export default function ImportModal({ open, onClose, onImported }: ImportModalPr
     setFileName(file.name)
     try {
       const { headers: h, rows: r } = await parseFile(file)
+      if (r.length === 0) {
+        setParseError('Hiç satır içe aktarılamadı — sütun isimlerini kontrol et.')
+        return
+      }
       const autoMapping: Record<string, AppField> = {}
       h.forEach(col => { autoMapping[col] = autoDetect(col) })
       setHeaders(h)
