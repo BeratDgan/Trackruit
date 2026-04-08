@@ -4,47 +4,31 @@ import Image from 'next/image'
 import GoogleSignInButton from './GoogleSignInButton'
 import ThemeToggle from '@/components/ThemeToggle'
 
-// ── Feature data ────────────────────────────────────────────────────────────
+// ── Plain-data arrays (no JSX — server component safe) ──────────────────────
 const FEATURES = [
   {
+    key: 'kanban',
     title: 'Kanban Takibi',
     desc: 'Başvurularını görsel panoda sürükle-bırak ile organize et',
     accent: '#60A5FA',
     bg: 'rgba(96, 165, 250, 0.08)',
     border: 'rgba(96, 165, 250, 0.14)',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-        <rect x="6" y="2" width="4" height="8" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-        <rect x="11" y="2" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-      </svg>
-    ),
   },
   {
+    key: 'ai',
     title: 'AI Kapak Mektubu',
     desc: 'Her ilan için pozisyona özel mektup saniyeler içinde üret',
     accent: '#0AA696',
     bg: 'rgba(10, 166, 150, 0.08)',
     border: 'rgba(10, 166, 150, 0.14)',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5z" stroke="currentColor" strokeWidth="1.4"/>
-        <path d="M5.5 8.5l1.5 1.5 3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
   },
   {
+    key: 'analytics',
     title: 'Akıllı Analitik',
     desc: 'Mülakat oranı ve başarı trendlerini gerçek zamanlı izle',
     accent: '#FBBF24',
     bg: 'rgba(251, 191, 36, 0.08)',
     border: 'rgba(251, 191, 36, 0.14)',
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M2 12l3.5-4 3 2.5L12 5l2 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M2 14h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-      </svg>
-    ),
   },
 ]
 
@@ -53,6 +37,33 @@ const STATS = [
   { value: '12k',  label: 'Başvuru takibi' },
   { value: '94%',  label: 'Mülakat başarısı' },
 ]
+
+// ── Feature icons rendered inline ──────────────────────────────────────────
+function FeatureIcon({ featureKey }: { featureKey: string }) {
+  if (featureKey === 'kanban') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+        <rect x="6" y="2" width="4" height="8" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+        <rect x="11" y="2" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+      </svg>
+    )
+  }
+  if (featureKey === 'ai') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5z" stroke="currentColor" strokeWidth="1.4"/>
+        <path d="M5.5 8.5l1.5 1.5 3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  }
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M2 12l3.5-4 3 2.5L12 5l2 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M2 14h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  )
+}
 
 export default async function LoginPage() {
   const supabase = createClient()
@@ -79,15 +90,13 @@ export default async function LoginPage() {
             backgroundSize: '48px 48px',
           }}
         />
-        {/* Radial glow orb */}
+        {/* Radial glow orbs */}
         <div
           aria-hidden
           className="absolute pointer-events-none"
           style={{
-            top: '-80px',
-            right: '-80px',
-            width: '380px',
-            height: '380px',
+            top: '-80px', right: '-80px',
+            width: '380px', height: '380px',
             background: 'radial-gradient(circle, rgba(10,166,150,0.12) 0%, transparent 70%)',
             borderRadius: '50%',
           }}
@@ -96,10 +105,8 @@ export default async function LoginPage() {
           aria-hidden
           className="absolute pointer-events-none"
           style={{
-            bottom: '60px',
-            left: '-60px',
-            width: '280px',
-            height: '280px',
+            bottom: '60px', left: '-60px',
+            width: '280px', height: '280px',
             background: 'radial-gradient(circle, rgba(96,165,250,0.07) 0%, transparent 70%)',
             borderRadius: '50%',
           }}
@@ -115,7 +122,7 @@ export default async function LoginPage() {
             style={{ height: 36, width: 'auto' }}
           />
           <span
-            className="text-lg font-semibold tracking-wide"
+            className="text-lg font-semibold"
             style={{ color: 'rgba(255,255,255,0.88)', letterSpacing: '-0.01em' }}
           >
             trackruit
@@ -163,33 +170,21 @@ export default async function LoginPage() {
           <div className="flex flex-col gap-2.5">
             {FEATURES.map(f => (
               <div
-                key={f.title}
+                key={f.key}
                 className="flex items-center gap-3.5 px-4 py-3.5 rounded-2xl"
-                style={{
-                  background: f.bg,
-                  border: `1px solid ${f.border}`,
-                }}
+                style={{ background: f.bg, border: `1px solid ${f.border}` }}
               >
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: f.border,
-                    color: f.accent,
-                  }}
+                  style={{ background: f.border, color: f.accent }}
                 >
-                  {f.icon}
+                  <FeatureIcon featureKey={f.key} />
                 </div>
                 <div>
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: 'rgba(255,255,255,0.88)' }}
-                  >
+                  <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.88)' }}>
                     {f.title}
                   </p>
-                  <p
-                    className="text-xs mt-0.5 leading-snug"
-                    style={{ color: 'rgba(255,255,255,0.38)' }}
-                  >
+                  <p className="text-xs mt-0.5 leading-snug" style={{ color: 'rgba(255,255,255,0.38)' }}>
                     {f.desc}
                   </p>
                 </div>
@@ -202,10 +197,7 @@ export default async function LoginPage() {
         <div className="relative z-10 flex gap-8">
           {STATS.map(({ value, label }) => (
             <div key={label}>
-              <p
-                className="text-2xl font-semibold"
-                style={{ color: 'var(--teal)', letterSpacing: '-0.02em' }}
-              >
+              <p className="text-2xl font-semibold" style={{ color: 'var(--teal)', letterSpacing: '-0.02em' }}>
                 {value}
               </p>
               <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
@@ -218,7 +210,7 @@ export default async function LoginPage() {
 
       {/* ── Right panel ─────────────────────────────────────────────────── */}
       <div className="flex-1 flex items-center justify-center p-6 relative">
-        {/* Subtle right-panel glow */}
+        {/* Subtle glow behind card */}
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"
@@ -233,9 +225,8 @@ export default async function LoginPage() {
         </div>
 
         {/* Auth card */}
-        <div
-          className="w-full max-w-sm flex flex-col gap-7 relative"
-        >
+        <div className="w-full max-w-sm flex flex-col gap-7 relative">
+
           {/* Mobile logo */}
           <div className="lg:hidden flex flex-col items-center gap-3">
             <Image
@@ -245,10 +236,7 @@ export default async function LoginPage() {
               height={342}
               style={{ height: 40, width: 'auto' }}
             />
-            <span
-              className="text-base font-medium"
-              style={{ color: 'var(--text-secondary)' }}
-            >
+            <span className="text-base font-medium" style={{ color: 'var(--text-secondary)' }}>
               AI destekli kariyer takibi
             </span>
           </div>
@@ -286,10 +274,10 @@ export default async function LoginPage() {
               </div>
             </div>
 
-            {/* Feature bullets (mobile) */}
+            {/* Feature bullets — mobile only */}
             <div className="flex flex-col gap-2 lg:hidden">
               {FEATURES.map(f => (
-                <div key={f.title} className="flex items-center gap-2.5">
+                <div key={f.key} className="flex items-center gap-2.5">
                   <span
                     className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                     style={{ background: f.accent }}
@@ -305,10 +293,7 @@ export default async function LoginPage() {
           {/* ToS */}
           <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
             Giriş yaparak{' '}
-            <span
-              className="underline cursor-pointer"
-              style={{ color: 'var(--text-secondary)' }}
-            >
+            <span className="underline cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
               Kullanım Koşulları
             </span>
             &apos;nı kabul etmiş olursun.
