@@ -104,11 +104,21 @@ export function KanbanCard({
         boxShadow: isOverlay
           ? '0 16px 40px rgba(11,34,64,0.16), 0 4px 12px rgba(11,34,64,0.08)'
           : '0 1px 3px rgba(11,34,64,0.04)',
-        transform: isOverlay ? 'rotate(2deg) scale(1.02)' : undefined,
-        transition: isDragging ? 'none' : 'box-shadow 0.15s ease, opacity 0.25s ease',
+        transform: isOverlay ? 'rotate(2deg) scale(1.03)' : undefined,
+        transition: isDragging ? 'none' : 'box-shadow 0.15s ease, opacity 0.25s ease, transform 0.15s ease',
       }}
-      onMouseEnter={e => { if (!isDragging && !isOverlay) e.currentTarget.style.boxShadow = '0 4px 12px rgba(11,34,64,0.09), 0 1px 3px rgba(11,34,64,0.05)' }}
-      onMouseLeave={e => { if (!isOverlay) e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)' }}
+      onMouseEnter={e => {
+        if (!isDragging && !isOverlay) {
+          e.currentTarget.style.boxShadow = '0 6px 20px rgba(11,34,64,0.14), 0 2px 6px rgba(11,34,64,0.08)'
+          e.currentTarget.style.transform = 'translateY(-2px)'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isOverlay) {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)'
+          e.currentTarget.style.transform = 'none'
+        }
+      }}
       onPointerDown={e => { pointerStart.current = { x: e.clientX, y: e.clientY } }}
       onClick={e => {
         if (isOverlay || !onEdit || !pointerStart.current) return
