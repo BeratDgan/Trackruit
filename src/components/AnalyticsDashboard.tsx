@@ -357,7 +357,7 @@ export default function AnalyticsDashboard({ applications: initialApplications }
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Analitik</h1>
           <div className="flex items-center gap-2 mt-1">

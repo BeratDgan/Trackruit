@@ -192,13 +192,13 @@ export function KanbanCard({
 
         {!isOverlay && (
           <div
-            className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            className="flex items-center gap-0.5 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150"
             onPointerDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
           >
             <button
               onClick={onEdit}
-              className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
+              className="h-8 w-8 sm:h-6 sm:w-6 rounded-md flex items-center justify-center transition-colors"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-applied-bg)'; e.currentTarget.style.color = 'var(--status-applied-text)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
@@ -210,7 +210,7 @@ export function KanbanCard({
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
-              className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
+              className="h-8 w-8 sm:h-6 sm:w-6 rounded-md flex items-center justify-center transition-colors"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-rejected-bg)'; e.currentTarget.style.color = 'var(--status-rejected-text)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}

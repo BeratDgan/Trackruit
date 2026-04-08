@@ -155,7 +155,7 @@ function Header({
   const atLim = planType === 'free' && count >= freeLimit
 
   return (
-    <div className="flex items-start justify-between">
+    <div className="flex items-start justify-between flex-wrap gap-3">
       <div>
         <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Başvurularım
@@ -206,7 +206,7 @@ function Header({
           <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
             <path d="M7 1v12M1 7h12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-          Yeni Başvuru
+          <span className="hidden sm:inline">Yeni Başvuru</span>
         </button>
       </div>
     </div>
@@ -436,26 +436,26 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
 
         {/* Actions */}
         {confirmDelete ? (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Bu başvuruyu silmek istediğinizden emin misiniz?</span>
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            <span className="text-xs hidden sm:block" style={{ color: 'var(--text-secondary)' }}>Silmek istediğinden emin misin?</span>
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium text-white disabled:opacity-60"
-              style={{ background: 'var(--status-rejected-text)' }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-60"
+              style={{ background: 'var(--status-rejected-text)', minHeight: 32 }}
             >
               {deleting ? '…' : 'Sil'}
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium"
-              style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+              style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)', minHeight: 32 }}
             >
               İptal
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             {/* Calendar — interview */}
             {showInterview && (
               <CalendarButton
@@ -733,16 +733,17 @@ function CLModal({ children, onClose, title, wide }: {
     >
       <div
         ref={ref}
-        className="w-full animate-modal"
+        className="w-full animate-modal flex flex-col"
         style={{
           maxWidth: wide ? 640 : 480,
+          maxHeight: 'calc(100dvh - 2rem)',
           background: 'var(--bg-card)',
           border: '1px solid var(--border-strong)',
           borderRadius: 20,
           boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
         }}
       >
-        <div className="flex items-center justify-between px-6 pt-5 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center gap-2.5">
             <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ background: 'var(--teal-glow)', border: '1px solid var(--teal)' }}>
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
@@ -764,7 +765,7 @@ function CLModal({ children, onClose, title, wide }: {
             </svg>
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto">{children}</div>
       </div>
     </div>
   )

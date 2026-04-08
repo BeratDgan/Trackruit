@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 import GoogleSignInButton from './GoogleSignInButton'
 import ThemeToggle from '@/components/ThemeToggle'
+import { ToastProvider } from '@/components/Toast'
+import SessionExpiredNotice from './SessionExpiredNotice'
 
 // ── Plain-data arrays (no JSX — server component safe) ──────────────────────
 const FEATURES = [
@@ -34,8 +36,8 @@ const FEATURES = [
 
 const STATS = [
   { value: '340+', label: 'Aktif kullanıcı' },
-  { value: '12k',  label: 'Başvuru takibi' },
-  { value: '94%',  label: 'Mülakat başarısı' },
+  { value: '12k', label: 'Başvuru takibi' },
+  { value: '94%', label: 'Mülakat başarısı' },
 ]
 
 // ── Feature icons rendered inline ──────────────────────────────────────────
@@ -43,34 +45,38 @@ function FeatureIcon({ featureKey }: { featureKey: string }) {
   if (featureKey === 'kanban') {
     return (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-        <rect x="6" y="2" width="4" height="8" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-        <rect x="11" y="2" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.4"/>
+        <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.4" />
+        <rect x="6" y="2" width="4" height="8" rx="1" stroke="currentColor" strokeWidth="1.4" />
+        <rect x="11" y="2" width="4" height="10" rx="1" stroke="currentColor" strokeWidth="1.4" />
       </svg>
     )
   }
   if (featureKey === 'ai') {
     return (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5z" stroke="currentColor" strokeWidth="1.4"/>
-        <path d="M5.5 8.5l1.5 1.5 3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5z" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M5.5 8.5l1.5 1.5 3.5-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     )
   }
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M2 12l3.5-4 3 2.5L12 5l2 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M2 14h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <path d="M2 12l3.5-4 3 2.5L12 5l2 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2 14h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   )
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Record<string, string> }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect('/dashboard')
 
+  const expired = searchParams.expired === '1'
+
   return (
+    <ToastProvider>
+    <SessionExpiredNotice expired={expired} />
     <main className="min-h-screen flex" style={{ background: 'var(--bg-base)' }}>
 
       {/* ── Left panel ──────────────────────────────────────────────────── */}
@@ -301,5 +307,6 @@ export default async function LoginPage() {
         </div>
       </div>
     </main>
+    </ToastProvider>
   )
 }

@@ -103,6 +103,7 @@ body {
 .input-base {
   width: 100%;
   padding: 0.5rem 0.75rem;
+  min-height: 44px;
   border-radius: 0.625rem;
   font-size: 0.875rem;
   border: 1.5px solid var(--border-strong);

@@ -264,7 +264,7 @@ export default function Navbar({ user }: NavbarProps) {
             <Link
               key={href}
               href={href}
-              className="flex-1 text-center px-3 py-1.5 rounded-lg text-sm transition-colors"
+              className="flex-1 text-center px-3 py-3 rounded-lg text-sm transition-colors"
               style={{
                 color: active ? 'var(--teal)' : 'var(--text-secondary)',
                 background: active ? 'var(--teal-glow)' : 'transparent',
