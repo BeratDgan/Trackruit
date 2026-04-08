@@ -224,7 +224,7 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
       location: location.trim() || null,
       deadline: deadline || null,
       applied_date: appliedDate || null,
-      interview_date: status === 'interview' ? (interviewDate || null) : null,
+      interview_date: interviewDate || null,
     }
 
     try {
@@ -359,7 +359,7 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
                 ))}
               </select>
             </Field>
-            <Field label="İlan Linki" error={fieldErrors.url}>
+            <Field label="İlan Linki (opsiyonel)" error={fieldErrors.url}>
               <input
                 type="text"
                 value={url}
@@ -375,11 +375,11 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
           <SectionLabel>Tarihler</SectionLabel>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Başvuru Tarihi">
+            <Field label="Başvuru Tarihi (opsiyonel)">
               <DateInput value={appliedDate} onChange={setAppliedDate} placeholder="Tarih seç" />
             </Field>
             <div className="flex flex-col gap-1.5">
-              <Field label="Son Başvuru Tarihi">
+              <Field label="Son Başvuru Tarihi (opsiyonel)">
                 <DateInput value={deadline} onChange={setDeadline} placeholder="Tarih seç" />
               </Field>
               {deadlineWarn && (
@@ -394,27 +394,25 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
             </div>
           </div>
 
-          {status === 'interview' && (
-            <div className="flex flex-col gap-1.5">
-              <Field label="Mülakat Tarihi">
-                <DateInput value={interviewDate} onChange={setInterviewDate} placeholder="Tarih seç" />
-              </Field>
-              {interviewWarn && (
-                <p className="text-xs flex items-center gap-1" style={{ color: 'var(--status-interview-text)' }}>
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
-                    <path d="M6 3.5v3M6 8v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                  </svg>
-                  Mülakat tarihi bugün veya geçmişte
-                </p>
-              )}
-            </div>
-          )}
+          <div className="flex flex-col gap-1.5">
+            <Field label="Mülakat Tarihi (opsiyonel)">
+              <DateInput value={interviewDate} onChange={setInterviewDate} placeholder="Tarih seç" />
+            </Field>
+            {interviewWarn && (
+              <p className="text-xs flex items-center gap-1" style={{ color: 'var(--status-interview-text)' }}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M6 3.5v3M6 8v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                Mülakat tarihi bugün veya geçmişte
+              </p>
+            )}
+          </div>
 
           {/* — Detaylar ——————————————————————————— */}
           <SectionLabel>Detaylar</SectionLabel>
 
-          <Field label="Maaş">
+          <Field label="Maaş (opsiyonel)">
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <span
@@ -445,7 +443,7 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
             </div>
           </Field>
 
-          <Field label="Konum">
+          <Field label="Konum (opsiyonel)">
             <input
               value={location}
               onChange={e => setLocation(e.target.value)}
@@ -454,7 +452,7 @@ export default function ApplicationModal({ open, onClose, onCreated, onUpdated, 
             />
           </Field>
 
-          <Field label="Notlar">
+          <Field label="Notlar (opsiyonel)">
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}

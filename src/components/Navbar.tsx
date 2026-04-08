@@ -11,6 +11,11 @@ interface NavbarProps {
   user: User
 }
 
+const NAV_LINKS = [
+  { href: '/dashboard', label: 'Başvurular' },
+  { href: '/dashboard/analytics', label: 'Analitik' },
+]
+
 export default function Navbar({ user }: NavbarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -28,84 +33,116 @@ export default function Navbar({ user }: NavbarProps) {
 
   return (
     <header
-      className="h-14 px-6 flex items-center justify-between sticky top-0 z-30"
+      className="sticky top-0 z-30"
       style={{
-        background: 'rgba(7, 17, 29, 0.85)',
+        background: 'rgba(7, 17, 29, 0.90)',
         borderBottom: '1px solid var(--border)',
         backdropFilter: 'blur(16px)',
       }}
     >
-      <div className="flex items-center gap-6">
-        <Image src="/logo/trackruit-on-dark.png" alt="Trackruit" width={1782} height={470} priority style={{ height: 28, width: 'auto' }} />
-        <nav className="hidden sm:flex items-center gap-1">
-          {[
-            { href: '/dashboard', label: 'Başvurular' },
-            { href: '/dashboard/analytics', label: 'Analitik' },
-          ].map(({ href, label }) => {
-            const active = pathname === href
-            return (
-              <Link
-                key={href}
-                href={href}
-                className="px-3 py-1.5 rounded-lg text-sm transition-colors"
-                style={{
-                  color: active ? 'var(--teal)' : 'var(--text-secondary)',
-                  background: active ? 'var(--teal-glow)' : 'transparent',
-                  fontWeight: active ? 600 : 400,
-                }}
-              >
-                {label}
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
+      {/* ── Main row ──────────────────────────────────────────────────────── */}
+      <div className="h-14 px-4 sm:px-6 flex items-center justify-between">
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2.5">
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt={name}
-              width={30}
-              height={30}
-              className="rounded-full"
-              style={{ border: '2px solid var(--border)' }}
-            />
-          ) : (
-            <span
-              className="h-[30px] w-[30px] rounded-full text-white text-xs font-semibold flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--navy)' }}
-            >
-              {initials}
-            </span>
-          )}
-          <span className="text-sm hidden sm:block" style={{ color: 'var(--text-secondary)' }}>
-            {email}
-          </span>
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Image
+            src="/logo/trackruit-on-dark.png"
+            alt="Trackruit"
+            width={1782}
+            height={470}
+            priority
+            style={{ height: 26, width: 'auto' }}
+          />
+
+          {/* Desktop nav */}
+          <nav className="hidden sm:flex items-center gap-1">
+            {NAV_LINKS.map(({ href, label }) => {
+              const active = pathname === href
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className="px-3 py-1.5 rounded-lg text-sm transition-colors"
+                  style={{
+                    color: active ? 'var(--teal)' : 'var(--text-secondary)',
+                    background: active ? 'var(--teal-glow)' : 'transparent',
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  {label}
+                </Link>
+              )
+            })}
+          </nav>
         </div>
 
-        <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={name}
+                width={30}
+                height={30}
+                className="rounded-full"
+                style={{ border: '2px solid var(--border)' }}
+              />
+            ) : (
+              <span
+                className="h-[30px] w-[30px] rounded-full text-white text-xs font-semibold flex items-center justify-center flex-shrink-0"
+                style={{ background: 'var(--navy)' }}
+              >
+                {initials}
+              </span>
+            )}
+            <span className="text-sm hidden sm:block" style={{ color: 'var(--text-secondary)' }}>
+              {email}
+            </span>
+          </div>
 
-        <ThemeToggle />
+          <div className="h-4 w-px hidden sm:block" style={{ background: 'var(--border)' }} />
+          <ThemeToggle />
+          <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
 
-        <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
+          <button
+            onClick={handleSignOut}
+            className="text-sm px-2 sm:px-3 py-1.5 rounded-lg transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-raised)'
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
+            }}
+          >
+            Çıkış
+          </button>
+        </div>
+      </div>
 
-        <button
-          onClick={handleSignOut}
-          className="text-sm px-3 py-1.5 rounded-lg transition-colors"
-          style={{ color: 'var(--text-secondary)' }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-raised)'
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)'
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-            ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'
-          }}
-        >
-          Çıkış
-        </button>
+      {/* ── Mobile nav row ────────────────────────────────────────────────── */}
+      <div
+        className="flex sm:hidden items-center gap-1 px-4 pb-2"
+        style={{ borderTop: '1px solid var(--border)' }}
+      >
+        {NAV_LINKS.map(({ href, label }) => {
+          const active = pathname === href
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex-1 text-center px-3 py-1.5 rounded-lg text-sm transition-colors"
+              style={{
+                color: active ? 'var(--teal)' : 'var(--text-secondary)',
+                background: active ? 'var(--teal-glow)' : 'transparent',
+                fontWeight: active ? 600 : 400,
+              }}
+            >
+              {label}
+            </Link>
+          )
+        })}
       </div>
     </header>
   )

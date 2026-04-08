@@ -344,7 +344,9 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
       setCoverLetter(data.coverLetter)
       setClState('result')
     } catch (err) {
-      setClError(err instanceof Error ? err.message : 'Bir hata oluştu')
+      const msg = err instanceof Error ? err.message : 'Ön yazı oluşturulamadı'
+      setClError(msg)
+      toast(msg, 'error')
       setClState('idle')
     }
   }
@@ -435,21 +437,21 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
         {/* Actions */}
         {confirmDelete ? (
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Silinsin mi?</span>
+            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Bu başvuruyu silmek istediğinizden emin misiniz?</span>
             <button
               onClick={handleDelete}
               disabled={deleting}
               className="px-2.5 py-1 rounded-lg text-xs font-medium text-white disabled:opacity-60"
               style={{ background: 'var(--status-rejected-text)' }}
             >
-              {deleting ? '…' : 'Evet'}
+              {deleting ? '…' : 'Sil'}
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
               className="px-2.5 py-1 rounded-lg text-xs font-medium"
               style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
             >
-              Hayır
+              İptal
             </button>
           </div>
         ) : (

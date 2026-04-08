@@ -279,8 +279,43 @@ export default function KanbanBoard({
         onImported={apps => { onImported?.(apps); setImportOpen(false) }}
       />
 
-      {/* ── Filter zero state ────────────────────────────────────────────── */}
-      {isFiltering && filtered.length === 0 ? (
+      {/* ── Zero state — no applications at all ──────────────────────────── */}
+      {applications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-28 gap-5 text-center">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--text-muted)' }}>
+              <rect x="2" y="4" width="5" height="16" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+              <rect x="9.5" y="4" width="5" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+              <rect x="17" y="4" width="5" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Henüz başvuru yok
+            </p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+              İlk başvurunu ekle ve kanban görünümünde takip et
+            </p>
+          </div>
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-90"
+              style={{ background: 'var(--teal)' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1v12M1 7h12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              Başvuru Ekle
+            </button>
+          )}
+        </div>
+
+      ) : isFiltering && filtered.length === 0 ? (
+        /* ── Filter zero state ────────────────────────────────────────────── */
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color: 'var(--border-strong)' }}>
             <circle cx="14" cy="14" r="9" stroke="currentColor" strokeWidth="1.5"/>
@@ -300,6 +335,7 @@ export default function KanbanBoard({
             Filtreyi Temizle
           </button>
         </div>
+
       ) : (
         /* ── Columns ──────────────────────────────────────────────────────── */
         <div className="flex gap-3 overflow-x-auto pb-6" style={{ minHeight: 'calc(100vh - 260px)' }}>

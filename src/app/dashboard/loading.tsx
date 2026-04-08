@@ -1,4 +1,51 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+
+const TIMEOUT_MS = 8000
+
 export default function DashboardLoading() {
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), TIMEOUT_MS)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (timedOut) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
+        <div
+          className="w-14 h-14 rounded-2xl flex items-center justify-center"
+          style={{ background: 'var(--status-rejected-bg)', border: '1px solid var(--status-rejected-text)' }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ color: 'var(--status-rejected-text)' }}>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M12 7v5.5M12 15.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <p className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Yükleme zaman aşımına uğradı
+          </p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            Veriler 8 saniye içinde gelmedi. Bağlantını kontrol et.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-opacity hover:opacity-90"
+          style={{ background: 'var(--teal)' }}
+        >
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M1 7A6 6 0 1112.5 4M13 1v4H9" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Sayfayı Yenile
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header skeleton */}
