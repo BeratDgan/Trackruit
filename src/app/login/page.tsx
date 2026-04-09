@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
-import GoogleSignInButton from './GoogleSignInButton'
+import AuthCard from './AuthCard'
 import ThemeToggle from '@/components/ThemeToggle'
 import { ToastProvider } from '@/components/Toast'
 import SessionExpiredNotice from './SessionExpiredNotice'
@@ -231,7 +231,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Record
         </div>
 
         {/* Auth card */}
-        <div className="w-full max-w-sm flex flex-col gap-7 relative">
+        <div className="w-full max-w-sm flex flex-col gap-6 relative">
 
           {/* Mobile logo */}
           <div className="lg:hidden flex flex-col items-center gap-3">
@@ -247,58 +247,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Record
             </span>
           </div>
 
-          {/* Card */}
-          <div
-            className="w-full rounded-2xl p-8 flex flex-col gap-7"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border-strong)',
-              boxShadow: '0 0 0 1px rgba(10,166,150,0.06), 0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.3)',
-            }}
-          >
-            <div>
-              <h2
-                className="text-xl font-semibold"
-                style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
-              >
-                Hoş geldin 👋
-              </h2>
-              <p className="text-sm mt-1.5" style={{ color: 'var(--text-secondary)' }}>
-                Hesabın yoksa otomatik olarak oluşturulur.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <GoogleSignInButton />
-
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Ücretsiz · Kredi kartı gerekmez
-                </span>
-                <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-              </div>
-            </div>
-
-            {/* Feature bullets — mobile only */}
-            <div className="flex flex-col gap-2 lg:hidden">
-              {FEATURES.map(f => (
-                <div key={f.key} className="flex items-center gap-2.5">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ background: f.accent }}
-                  />
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                    {f.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <AuthCard />
 
           {/* ToS */}
           <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-            Giriş yaparak{' '}
+            Devam ederek{' '}
             <span className="underline cursor-pointer" style={{ color: 'var(--text-secondary)' }}>
               Kullanım Koşulları
             </span>
