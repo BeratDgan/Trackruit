@@ -32,6 +32,9 @@ export async function middleware(request: NextRequest) {
   if (!user && !PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
+    // If the user had a Supabase session cookie, their session expired
+    const hadSession = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+    if (hadSession) loginUrl.searchParams.set('expired', '1')
     return NextResponse.redirect(loginUrl)
   }
 

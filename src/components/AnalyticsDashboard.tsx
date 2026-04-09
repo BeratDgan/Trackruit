@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   AreaChart, Area, CartesianGrid,
@@ -49,22 +49,78 @@ function daysFromNow(dateStr: string): number {
   return Math.round((d.getTime() - now.getTime()) / 86_400_000)
 }
 
+// ── Inline tooltip ─────────────────────────────────────────────────────────
+function InfoTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+
+  return (
+    <span
+      ref={ref}
+      className="relative inline-flex items-center justify-center"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+      onFocus={() => setShow(true)}
+      onBlur={() => setShow(false)}
+      tabIndex={0}
+      role="button"
+      aria-label={text}
+      style={{ cursor: 'help' }}
+    >
+      <svg width="11" height="11" viewBox="0 0 12 12" fill="none" style={{ color: 'var(--text-muted)' }}>
+        <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2"/>
+        <path d="M6 5.5v3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+        <circle cx="6" cy="3.75" r="0.6" fill="currentColor"/>
+      </svg>
+      {show && (
+        <span
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 px-3 py-2 text-xs rounded-xl leading-snug pointer-events-none z-20"
+          style={{
+            background: 'var(--bg-raised)',
+            border: '1px solid var(--border-strong)',
+            color: 'var(--text-secondary)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            whiteSpace: 'normal',
+          }}
+        >
+          {text}
+          {/* Caret */}
+          <span
+            className="absolute left-1/2 -translate-x-1/2 top-full"
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              borderTop: '5px solid var(--border-strong)',
+            }}
+          />
+        </span>
+      )}
+    </span>
+  )
+}
+
 // ── Stat card ──────────────────────────────────────────────────────────────
 function StatCard({
-  label, value, sub, accent, change,
+  label, value, sub, accent, change, tooltip,
 }: {
   label: string
   value: string | number
   sub?: string
   accent?: string
   change?: number | null
+  tooltip?: string
 }) {
   return (
     <div
       className="rounded-2xl p-5 flex flex-col gap-1"
       style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
     >
-      <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</span>
+        {tooltip && <InfoTooltip text={tooltip} />}
+      </div>
       <span
         className="text-3xl font-bold tracking-tight"
         style={{ color: accent ?? 'var(--text-primary)' }}
@@ -145,6 +201,7 @@ export default function AnalyticsDashboard({ applications: initialApplications }
   const [editingApp, setEditingApp]     = useState<Application | undefined>()
   const [modalOpen, setModalOpen]       = useState(false)
   const [applications, setApplications] = useState(initialApplications)
+  const [lastUpdated]                   = useState(() => new Date())
 
   function openEdit(app: Application) { setEditingApp(app); setModalOpen(true) }
   function handleClose() { setModalOpen(false); setEditingApp(undefined) }
@@ -300,12 +357,24 @@ export default function AnalyticsDashboard({ applications: initialApplications }
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Analitik</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {total} başvurunun genel görünümü
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {total} başvurunun genel görünümü
+            </p>
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: 'var(--teal)' }}
+              />
+              {lastUpdated.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
         </div>
         <button
           onClick={() => exportCSV(applications)}
@@ -324,24 +393,33 @@ export default function AnalyticsDashboard({ applications: initialApplications }
       {/* Stat cards */}
       {sectionLabel('Özet')}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard label="Toplam Başvuru" value={total} sub="tüm zamanlar" change={monthChange} />
+        <StatCard
+          label="Toplam Başvuru"
+          value={total}
+          sub="tüm zamanlar"
+          change={monthChange}
+          tooltip="İstek listesi dahil tüm kayıtlı başvuruların toplamı."
+        />
         <StatCard
           label="Mülakat Oranı"
           value={`${interviewRate}%`}
           sub={`${interviewCount} mülakat / ${appliedTotal} başvuru`}
           accent={interviewRate >= 20 ? '#10b981' : undefined}
+          tooltip="Mülakat + Teklif aşamasına ulaşan başvuruların, wishlist hariç toplam başvuruya oranı."
         />
         <StatCard
           label="Teklif Oranı"
           value={`${offerRate}%`}
           sub={`${offeredCount} teklif`}
           accent={offeredCount > 0 ? '#10b981' : undefined}
+          tooltip="Teklif alınan başvuruların, wishlist hariç toplam başvuruya oranı."
         />
         <StatCard
           label="Red Oranı"
           value={`${rejectionRate}%`}
           sub={`${rejectedCount} reddedildi`}
           accent={rejectionRate > 50 ? '#ef4444' : undefined}
+          tooltip="Reddedilen başvuruların, wishlist hariç toplam başvuruya oranı."
         />
         {/* Avg salary card with toggle */}
         <div
@@ -349,7 +427,10 @@ export default function AnalyticsDashboard({ applications: initialApplications }
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Ort. Maaş Beklentisi</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Ort. Maaş Beklentisi</span>
+              <InfoTooltip text="Maaş bilgisi girilmiş başvurulardaki ortalama maaş beklentisi." />
+            </div>
             <div
               className="flex rounded-md overflow-hidden text-xs"
               style={{ border: '1px solid var(--border-strong)' }}

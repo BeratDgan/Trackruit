@@ -104,11 +104,21 @@ export function KanbanCard({
         boxShadow: isOverlay
           ? '0 16px 40px rgba(11,34,64,0.16), 0 4px 12px rgba(11,34,64,0.08)'
           : '0 1px 3px rgba(11,34,64,0.04)',
-        transform: isOverlay ? 'rotate(2deg) scale(1.02)' : undefined,
-        transition: isDragging ? 'none' : 'box-shadow 0.15s ease, opacity 0.25s ease',
+        transform: isOverlay ? 'rotate(2deg) scale(1.03)' : undefined,
+        transition: isDragging ? 'none' : 'box-shadow 0.15s ease, opacity 0.25s ease, transform 0.15s ease',
       }}
-      onMouseEnter={e => { if (!isDragging && !isOverlay) e.currentTarget.style.boxShadow = '0 4px 12px rgba(11,34,64,0.09), 0 1px 3px rgba(11,34,64,0.05)' }}
-      onMouseLeave={e => { if (!isOverlay) e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)' }}
+      onMouseEnter={e => {
+        if (!isDragging && !isOverlay) {
+          e.currentTarget.style.boxShadow = '0 6px 20px rgba(11,34,64,0.14), 0 2px 6px rgba(11,34,64,0.08)'
+          e.currentTarget.style.transform = 'translateY(-2px)'
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isOverlay) {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(11,34,64,0.04)'
+          e.currentTarget.style.transform = 'none'
+        }
+      }}
       onPointerDown={e => { pointerStart.current = { x: e.clientX, y: e.clientY } }}
       onClick={e => {
         if (isOverlay || !onEdit || !pointerStart.current) return
@@ -182,13 +192,13 @@ export function KanbanCard({
 
         {!isOverlay && (
           <div
-            className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+            className="flex items-center gap-0.5 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150"
             onPointerDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
           >
             <button
               onClick={onEdit}
-              className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
+              className="h-8 w-8 sm:h-6 sm:w-6 rounded-md flex items-center justify-center transition-colors"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-applied-bg)'; e.currentTarget.style.color = 'var(--status-applied-text)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
@@ -200,7 +210,7 @@ export function KanbanCard({
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
-              className="h-6 w-6 rounded-md flex items-center justify-center transition-colors"
+              className="h-8 w-8 sm:h-6 sm:w-6 rounded-md flex items-center justify-center transition-colors"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--status-rejected-bg)'; e.currentTarget.style.color = 'var(--status-rejected-text)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}

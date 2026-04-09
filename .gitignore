@@ -38,6 +38,7 @@ next-env.d.ts
 #agent
 ui-guidelines.md
 CLAUDE.MD
+.claude
 
 #photos
 /logo-pack
