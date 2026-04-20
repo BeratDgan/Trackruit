@@ -21,6 +21,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/login?error=auth`)
   }
 
+  // Ensure profiles row exists for OAuth users (no-op if already there)
+  if (data.user) {
+    await supabase.from('profiles').upsert(
+      { id: data.user.id, email: data.user.email, plan_type: 'free' },
+      { onConflict: 'id', ignoreDuplicates: true }
+    )
+  }
+
   // If incremental auth passed a return URL via the OAuth state param, use it
   const next = searchParams.get('next')
   const redirectTo = next && next.startsWith('/') ? `${origin}${next}` : `${origin}/dashboard`
