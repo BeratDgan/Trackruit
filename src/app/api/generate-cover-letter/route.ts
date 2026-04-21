@@ -3,7 +3,22 @@ import { createClient } from '@/lib/supabase/server'
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
 
-// Strip HTML tags and collapse whitespace; truncate to keep tokens manageable
+type Tone = 'warm' | 'direct' | 'deadpan' | 'formal'
+
+const TONE_INSTRUCTIONS: Record<Tone, string> = {
+  warm: 'Samimi, sıcak ve insancıl bir ton kullan. Kullanıcının hikayesi ön planda olsun, aşırı resmi olma. "Merhaba" ve "Sevgiler," gibi yumuşak ifadeler tercih et.',
+  direct: 'Net, özlü ve doğrudan bir ton kullan. Gereksiz süslemeler yok. Kısa ve güçlü cümleler. Kullanıcının değerini somut sonuçlarla ifade et.',
+  deadpan: 'Sakin, düz, az duygulu bir ton kullan. Abartısız, gerçekçi, belki hafif kuru bir mizah sezgisi olsun. Aşırı heyecanlı olma.',
+  formal: 'Resmi, profesyonel ve geleneksel bir ton kullan. "Sayın Yetkili" gibi hitaplarla başla, "Saygılarımla" ile bitir. Klasik iş mektubu yapısı.',
+}
+
+const TONE_CLOSINGS: Record<Tone, string> = {
+  warm: 'Sevgiler,',
+  direct: 'Best,',
+  deadpan: 'Selamlar,',
+  formal: 'Saygılarımla,',
+}
+
 function extractText(html: string, maxLen = 4000): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -37,23 +52,31 @@ async function generateCoverLetter(
   company: string,
   position: string,
   notes: string | null,
-  jobDescription: string,
+  jobDescription: string | null,
+  tone: Tone,
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
 
-  const systemPrompt = `You are an expert cover letter writer. Write professional, personalized cover letters tailored to the specific job and company. Be concise (3–4 paragraphs), highlight relevant skills, and sound human — not generic. Match the language of the job description (default to Turkish if unclear).`
+  const systemPrompt = `You are an expert cover letter writer writing in Turkish. Write professional, personalized cover letters tailored to the specific job and company. 3–4 concise paragraphs. Highlight relevant skills. Sound human, not generic. Never use placeholder text like [İsim] or [Name] — write a complete, ready-to-send letter.
 
-  const userPrompt = `Write a professional cover letter for this application:
+Tone for this letter:
+${TONE_INSTRUCTIONS[tone]}
+
+End the letter with: "${TONE_CLOSINGS[tone]}" followed by the user's first name on the next line. If you don't know the name, just end with "${TONE_CLOSINGS[tone]}" and no name.`
+
+  const userPrompt = `Write a cover letter in Turkish for this application:
 
 Company: ${company}
 Position: ${position}
-${notes ? `Applicant's notes: ${notes}` : ''}
+${notes ? `Applicant's notes about this role: ${notes}` : ''}
 
-Job posting:
-${jobDescription}
+${jobDescription
+      ? `Job posting details:\n${jobDescription}`
+      : 'No job posting details available. Write a strong, general-purpose letter that emphasizes transferable skills and interest in the company.'
+    }
 
-Write only the cover letter body — no meta-commentary or placeholders like [Your Name]. Use "Saygılarımla," or "Best regards," as closing depending on the detected language.`
+Output only the letter body. No commentary.`
 
   const res = await fetch(OPENAI_API_URL, {
     method: 'POST',
@@ -67,9 +90,10 @@ Write only the cover letter body — no meta-commentary or placeholders like [Yo
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.7,
+      temperature: 0.75,
       max_tokens: 800,
     }),
+    signal: AbortSignal.timeout(30000),
   })
 
   if (!res.ok) {
@@ -83,12 +107,16 @@ Write only the cover letter body — no meta-commentary or placeholders like [Yo
 
 export async function POST(request: Request) {
   try {
-    const { applicationId, jobDescription } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const { applicationId, jobDescription, tone = 'warm' } = body
+
     if (!applicationId) {
       return NextResponse.json({ error: 'applicationId required' }, { status: 400 })
     }
 
-    // Verify auth + fetch application
+    const validTones: Tone[] = ['warm', 'direct', 'deadpan', 'formal']
+    const resolvedTone: Tone = validTones.includes(tone) ? tone : 'warm'
+
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -104,27 +132,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
-    // Resolve job description
     let resolvedDescription: string | null = jobDescription?.trim() || null
-
     if (!resolvedDescription && app.url) {
       resolvedDescription = await tryFetchJobDescription(app.url)
     }
+    // NOTE: no longer returning needsManualInput — we generate a general
+    // letter when description unavailable. Spec mobile contract expects
+    // always-returns-a-letter (or an error).
 
-    if (!resolvedDescription) {
-      return NextResponse.json({ needsManualInput: true })
-    }
-
-    const coverLetter = await generateCoverLetter(
+    const letter = await generateCoverLetter(
       app.company,
       app.position,
       app.notes,
       resolvedDescription,
+      resolvedTone,
     )
 
-    return NextResponse.json({ coverLetter })
+    return NextResponse.json({
+      letter,
+      draftNumber: 1,
+      editedAt: new Date().toISOString(),
+      tone: resolvedTone,
+      hadJobDescription: !!resolvedDescription,
+    })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal server error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    const status = message.includes('timeout') ? 504 : 500
+    return NextResponse.json({ error: message }, { status })
   }
 }
