@@ -118,7 +118,16 @@ export async function POST(request: Request) {
     const resolvedTone: Tone = validTones.includes(tone) ? tone : 'warm'
 
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+
+    const authHeader = request.headers.get('authorization')
+    const bearerToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null
+
+    const { data: { user } } = bearerToken
+      ? await supabase.auth.getUser(bearerToken)
+      : await supabase.auth.getUser()
+
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: app, error } = await supabase
