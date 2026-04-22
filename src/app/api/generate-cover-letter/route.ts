@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
 
@@ -130,14 +131,35 @@ export async function POST(request: Request) {
 
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: app, error } = await supabase
+    let dbClient = supabase
+    if (bearerToken) {
+      dbClient = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${bearerToken}` } } }
+      )
+    }
+
+    console.log('[generate-cover-letter] Lookup params:', { applicationId, userId: user.id })
+
+    const { data: app, error } = await dbClient
       .from('applications')
       .select('company, position, notes, url')
       .eq('id', applicationId)
       .eq('user_id', user.id)
       .single()
 
-    if (error || !app) {
+    console.log('[generate-cover-letter] Lookup result:', { 
+      found: !!app, 
+      hasUrl: !!app?.url, 
+      errorCode: error?.code 
+    })
+
+    if (error && error.code !== 'PGRST116') {
+      return NextResponse.json({ error: 'Database query failed' }, { status: 500 })
+    }
+
+    if (!app) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
