@@ -233,8 +233,9 @@ function ViewBtn({ active, onClick, title, children }: {
 
 // ── Application card (list view) ──────────────────────────────────────────────
 
-type CLState = 'idle' | 'loading' | 'input' | 'result'
+type CLState = 'idle' | 'loading' | 'config' | 'result'
 type CalState = 'idle' | 'loading' | 'success' | 'error' | 'added'
+type Tone = 'warm' | 'direct' | 'deadpan' | 'formal'
 
 function ApplicationCard({ application: app, onEdit, onDeleted }: {
   application: Application
@@ -247,6 +248,7 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
   const [clState, setClState]             = useState<CLState>('idle')
   const [coverLetter, setCoverLetter]     = useState('')
   const [jobDesc, setJobDesc]             = useState('')
+  const [tone, setTone]                   = useState<Tone>('warm')
   const [clError, setClError]             = useState<string | null>(null)
   const [copied, setCopied]               = useState(false)
 
@@ -336,12 +338,11 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
       const res = await fetch('/api/generate-cover-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationId: app.id, jobDescription }),
+        body: JSON.stringify({ applicationId: app.id, jobDescription, tone }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Bir hata oluştu')
-      if (data.needsManualInput) { setClState('input'); return }
-      setCoverLetter(data.coverLetter)
+      setCoverLetter(data.letter ?? '')
       setClState('result')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Ön yazı oluşturulamadı'
@@ -476,7 +477,7 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
 
             {/* Cover Letter */}
             <button
-              onClick={() => requestCoverLetter()}
+              onClick={() => setClState('config')}
               disabled={clState === 'loading'}
               className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
               style={{ color: 'var(--text-muted)' }}
@@ -542,15 +543,27 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
         </p>
       )}
 
-      {/* ── Job description input modal ── */}
-      {clState === 'input' && (
-        <CLModal onClose={() => setClState('idle')} title="İlan Metnini Yapıştır">
-          <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
-            İlan linki otomatik okunamadı. İş ilanı metnini aşağıya yapıştır.
+      {/* ── Job description input / Config modal ── */}
+      {clState === 'config' && (
+        <CLModal onClose={() => setClState('idle')} title="Ön Yazı Oluştur">
+          <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Ton (Üslup)</p>
+          <select
+            className="input-base w-full mb-4"
+            value={tone}
+            onChange={e => setTone(e.target.value as Tone)}
+          >
+            <option value="warm">Samimi</option>
+            <option value="direct">Doğrudan</option>
+            <option value="deadpan">Ciddi / Düz</option>
+            <option value="formal">Resmi</option>
+          </select>
+
+          <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+            İsteğe bağlı: İş ilanı metni (Daha iyi sonuç için)
           </p>
           <textarea
             className="input-base resize-none"
-            rows={8}
+            rows={6}
             value={jobDesc}
             onChange={e => setJobDesc(e.target.value)}
             placeholder="İş ilanı içeriğini buraya yapıştır..."
@@ -567,8 +580,7 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
               İptal
             </button>
             <button
-              onClick={() => { setJobDesc(''); requestCoverLetter(jobDesc) }}
-              disabled={!jobDesc.trim()}
+              onClick={() => { requestCoverLetter(jobDesc) }}
               className="flex-1 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50"
               style={{ background: 'var(--teal)' }}
             >
@@ -590,7 +602,7 @@ function ApplicationCard({ application: app, onEdit, onDeleted }: {
           />
           <div className="flex gap-2 mt-4">
             <button
-              onClick={() => requestCoverLetter()}
+              onClick={() => requestCoverLetter(jobDesc)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium"
               style={{ border: '1.5px solid var(--border-strong)', color: 'var(--text-secondary)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-raised)')}
