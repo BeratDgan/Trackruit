@@ -59,7 +59,7 @@ async function generateCoverLetter(
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY is not set')
 
-  const systemPrompt = `You are an expert cover letter writer writing in Turkish. Write professional, personalized cover letters tailored to the specific job and company. 3–4 concise paragraphs. Highlight relevant skills. Sound human, not generic. Never use placeholder text like [İsim] or [Name] — write a complete, ready-to-send letter.
+  const systemPrompt = `You are an expert cover letter writer writing in Turkish. Write professional, personalized cover letters tailored to the specific job and company. 2–3 concise paragraphs, maximum 180 words total. Prioritize brevity and specificity over thoroughness. No filler, no restating the position title multiple times. Highlight relevant skills. Sound human, not generic. Never use placeholder text like [İsim] or [Name] — write a complete, ready-to-send letter.
 
 Tone for this letter:
 ${TONE_INSTRUCTIONS[tone]}
@@ -92,7 +92,7 @@ Output only the letter body. No commentary.`
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.75,
-      max_tokens: 800,
+      max_tokens: 450,
     }),
     signal: AbortSignal.timeout(30000),
   })
@@ -179,10 +179,41 @@ export async function POST(request: Request) {
       resolvedTone,
     )
 
+    const { data: existingDrafts } = await dbClient
+      .from('cover_letters')
+      .select('draft_number')
+      .eq('application_id', applicationId)
+      .eq('user_id', user.id)
+      .order('draft_number', { ascending: false })
+      .limit(1)
+
+    const nextDraftNumber = (existingDrafts?.[0]?.draft_number ?? 0) + 1
+
+    const { data: inserted, error: insertError } = await dbClient
+      .from('cover_letters')
+      .insert({
+        application_id: applicationId,
+        user_id: user.id,
+        content: letter,
+        tone: resolvedTone,
+        had_job_description: !!resolvedDescription,
+        draft_number: nextDraftNumber,
+      })
+      .select('id, created_at, edited_at')
+      .single()
+
+    if (insertError) {
+      console.error('[generate-cover-letter] insert failed:', insertError)
+      // Do not fail the request — the letter was generated successfully.
+      // Return it without the id; client can still display it.
+    }
+
     return NextResponse.json({
+      id: inserted?.id,
       letter,
-      draftNumber: 1,
-      editedAt: new Date().toISOString(),
+      draftNumber: nextDraftNumber,
+      editedAt: inserted?.edited_at ?? new Date().toISOString(),
+      createdAt: inserted?.created_at ?? new Date().toISOString(),
       tone: resolvedTone,
       hadJobDescription: !!resolvedDescription,
     })
